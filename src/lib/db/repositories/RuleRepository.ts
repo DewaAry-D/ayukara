@@ -12,12 +12,24 @@ import {
   Kutipan,
   Sumber,
 } from '../models';
+import {
+  HariRayaAturanItem,
+  IHariRayaRuleRepository,
+} from '../../engine/HariRayaResolver';
+import {
+  IUpacaraMatchRepository,
+  UpacaraMatchItem,
+} from '../../upacara/UpacaraMatcher';
+import {
+  WarigaRuleSet,
+  RuleHierarchyLevel,
+} from '../../engine/WarigaRuleEngine';
 
 export interface RuleRepositoryOptions {
   sequelize: Sequelize;
 }
 
-export class RuleRepository {
+export class RuleRepository implements IHariRayaRuleRepository, IUpacaraMatchRepository {
   private sequelize: Sequelize;
 
   constructor(options: RuleRepositoryOptions) {
@@ -33,6 +45,17 @@ export class RuleRepository {
 
   async getUpacaraById(id: number): Promise<Upacara | null> {
     return Upacara.findByPk(id);
+  }
+
+  async getAllCandidates(): Promise<UpacaraMatchItem[]> {
+    const upacaras = await this.getAllUpacara();
+    return upacaras.map((u) => ({
+      id: u.id,
+      nama: u.nama,
+      alias: [],
+      deskripsi: u.deskripsi,
+      jenis_penentuan: u.jenis_penentuan,
+    }));
   }
 
   async getDewasaRules(options?: {
@@ -96,6 +119,73 @@ export class RuleRepository {
       order: [['grup', 'ASC'], ['id', 'ASC']],
     });
   }
-}
 
-export default RuleRepository;
+  async getRulesByUpacaraId(upacaraId: number): Promise<HariRayaAturanItem[]> {
+    const rules = await this.getHariRayaAturan(upacaraId, { mode: 'all' });
+    return rules.map((r) => ({
+      id: r.id,
+      upacara_id: r.upacara_id,
+      grup: r.grup,
+      wewaran_nilai_id: r.wewaran_nilai_id,
+      wuku_id: r.wuku_id,
+      sasih_id: r.sasih_id,
+      penanggal: r.penanggal,
+      pangelong: r.pangelong,
+      is_purnama: r.is_purnama,
+      is_tilem: r.is_tilem,
+      penjelasan_penentuan: r.penjelasan_penentuan || '',
+      status: r.status,
+    }));
+  }
+
+  async getWarigaRuleSet(options?: { verifiedOnly?: boolean }): Promise<WarigaRuleSet> {
+    const dewasas = await Dewasa.findAll({
+      include: [
+        {
+          model: DewasaSyarat,
+          as: 'syarat_list',
+        },
+      ],
+    });
+
+    const aturans = await AturanDewasaUpacara.findAll({
+      where: options?.verifiedOnly ? { status: 'verified' } : {},
+    });
+
+    return {
+      dewasaList: dewasas.map((d) => ({
+        id: d.id,
+        nama: d.nama,
+        sifat: d.sifat,
+        deskripsi: d.deskripsi,
+        syarat: ((d as unknown as { syarat_list?: DewasaSyarat[] }).syarat_list || []).map((s) => ({
+          grup: s.grup,
+          wewaran_nilai_id: s.wewaran_nilai_id,
+          wuku_id: s.wuku_id,
+          sasih_id: s.sasih_id,
+          penanggal: s.penanggal,
+          pangelong: s.pangelong,
+          is_purnama: s.is_purnama,
+          is_tilem: s.is_tilem,
+        })),
+      })),
+      aturanList: aturans.map((a) => {
+        let level = RuleHierarchyLevel.WEWARAN;
+        if (a.prioritas >= 20) level = RuleHierarchyLevel.SASIH;
+        else if (a.prioritas >= 10) level = RuleHierarchyLevel.WUKU;
+
+        return {
+          id: a.id,
+          dewasa_id: a.dewasa_id,
+          upacara_id: a.upacara_id,
+          kategori_yadnya_id: a.kategori_yadnya_id,
+          efek: a.efek,
+          level,
+          status: a.status,
+          kutipan_id: a.kutipan_id,
+          catatan: a.catatan,
+        };
+      }),
+    };
+  }
+}
