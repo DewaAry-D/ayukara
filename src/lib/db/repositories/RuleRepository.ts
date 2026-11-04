@@ -20,6 +20,7 @@ import {
   IUpacaraMatchRepository,
   UpacaraMatchItem,
 } from '../../upacara/UpacaraMatcher';
+import { UPACARA_KNOWLEDGE_MAP } from '../../upacara/upacaraKnowledge';
 import {
   WarigaRuleSet,
   RuleHierarchyLevel,
@@ -49,13 +50,16 @@ export class RuleRepository implements IHariRayaRuleRepository, IUpacaraMatchRep
 
   async getAllCandidates(): Promise<UpacaraMatchItem[]> {
     const upacaras = await this.getAllUpacara();
-    return upacaras.map((u) => ({
-      id: u.id,
-      nama: u.nama,
-      alias: [],
-      deskripsi: u.deskripsi,
-      jenis_penentuan: u.jenis_penentuan,
-    }));
+    return upacaras.map((u) => {
+      const meta = UPACARA_KNOWLEDGE_MAP.get(u.id);
+      return {
+        id: u.id,
+        nama: u.nama,
+        alias: meta ? meta.aliases : [],
+        deskripsi: u.deskripsi || meta?.deskripsiBudaya || null,
+        jenis_penentuan: u.jenis_penentuan,
+      };
+    });
   }
 
   async getDewasaRules(options?: {

@@ -19,11 +19,25 @@ export interface HariRayaResolveOptions {
   verifiedOnly?: boolean;
 }
 
+export interface HariRayaDateOccurrence {
+  date: Date;
+  dateString: string;
+  weton: string;
+  wuku: string;
+  sasih: string;
+  urutanTahun: number; // 1, 2, dst. dalam tahun tersebut
+  isPast: boolean;     // apakah sudah lewat relatif terhadap tanggal acuan
+}
+
 export interface HariRayaResolveResult {
   upacaraId: number;
+  year: number;
+  occurrences: HariRayaDateOccurrence[];
+  totalOccurrences: number;
   nextDate: Date | null;
   nextDateString: string | null;
   penjelasanPenentuan: string;
+  penjelasanDetail?: string;
   isAvailable: boolean;
 }
 
@@ -40,11 +54,13 @@ export class HariRayaResolver {
   }
 
   /**
-   * Menentukan tanggal hari raya berikutnya dan deskripsi penentuannya.
+   * Menghitung seluruh kemunculan tanggal hari raya dalam satu tahun Masehi,
+   * mengakomodasi hari raya pawukon (siklus 210 hari) yang dapat jatuh 2 kali dalam setahun.
    */
-  public async resolveNext(
+  public async resolveForYear(
     upacaraId: number,
-    options?: HariRayaResolveOptions
+    year: number,
+    options?: { referenceDate?: Date; verifiedOnly?: boolean }
   ): Promise<HariRayaResolveResult> {
     const verifiedOnly = options?.verifiedOnly ?? true;
     const allRules = await this.ruleRepository.getRulesByUpacaraId(upacaraId);
@@ -56,49 +72,112 @@ export class HariRayaResolver {
     if (!rules || rules.length === 0) {
       return {
         upacaraId,
+        year,
+        occurrences: [],
+        totalOccurrences: 0,
         nextDate: null,
         nextDateString: null,
         penjelasanPenentuan: 'Aturan penentuan belum tersedia',
+        penjelasanDetail: 'Aturan penentuan belum tersedia',
         isAvailable: false,
       };
     }
 
-    const penjelasan = rules[0].penjelasan_penentuan || 'Aturan penentuan belum tersedia';
+    const rawPenjelasan = rules[0].penjelasan_penentuan || 'Aturan penentuan belum tersedia';
 
-    // Tentukan rentang pencarian tanggal
-    let startDate: Date;
-    let maxDaysToScan = 420; // 420 hari mencakup 2 siklus pawukon (210x2) dan > 1 tahun sasih
+    // Tanggal acuan untuk menentukan apakah jatuhan sudah lewat (isPast)
+    const ref = options?.referenceDate ? new Date(options.referenceDate) : new Date();
+    const refMidnight = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate()).getTime();
 
-    if (options?.year) {
-      startDate = new Date(options.year, 0, 1);
-      maxDaysToScan = 366;
-    } else {
-      const ref = options?.referenceDate ? new Date(options.referenceDate) : new Date();
-      startDate = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
-    }
+    // Pindai setiap hari dalam tahun yang ditentukan (1 Jan - 31 Des)
+    const occurrences: HariRayaDateOccurrence[] = [];
+    const current = new Date(year, 0, 1);
+    const endOfYear = new Date(year, 11, 31);
 
-    const current = new Date(startDate);
-    for (let day = 0; day <= maxDaysToScan; day++) {
+    while (current <= endOfYear) {
       const dateInfo = this.calendarAdapter.fromDate(current);
       if (checkDewasaSyarat(rules, dateInfo)) {
-        return {
-          upacaraId,
-          nextDate: new Date(current),
-          nextDateString: dateInfo.dateString,
-          penjelasanPenentuan: penjelasan,
-          isAvailable: true,
-        };
+        const isPast = current.getTime() < refMidnight;
+        const sapta = typeof dateInfo.wewaran.saptawara === 'object' ? dateInfo.wewaran.saptawara.nama : dateInfo.wewaran.saptawara;
+        const panca = typeof dateInfo.wewaran.pancawara === 'object' ? dateInfo.wewaran.pancawara.nama : dateInfo.wewaran.pancawara;
+        const weton = `${sapta} ${panca}`;
+
+        occurrences.push({
+          date: new Date(current),
+          dateString: dateInfo.dateString,
+          weton,
+          wuku: dateInfo.wuku.nama,
+          sasih: dateInfo.sasih.nama,
+          urutanTahun: occurrences.length + 1,
+          isPast,
+        });
       }
       current.setDate(current.getDate() + 1);
     }
 
+    // Tentukan tanggal berikutnya / terdekat
+    let nextDate: Date | null = null;
+    let nextDateString: string | null = null;
+
+    if (occurrences.length > 0) {
+      if (year === ref.getFullYear()) {
+        // Tahun berjalan: cari yang belum lewat
+        const upcoming = occurrences.find((occ) => !occ.isPast);
+        if (upcoming) {
+          nextDate = upcoming.date;
+          nextDateString = upcoming.dateString;
+        } else {
+          // Bila semua sudah lewat, rujuk jatuhan terakhir di tahun ini
+          nextDate = occurrences[occurrences.length - 1].date;
+          nextDateString = occurrences[occurrences.length - 1].dateString;
+        }
+      } else if (year > ref.getFullYear()) {
+        // Tahun mendatang: jatuhan pertama
+        nextDate = occurrences[0].date;
+        nextDateString = occurrences[0].dateString;
+      } else {
+        // Tahun lampau: jatuhan pertama
+        nextDate = occurrences[0].date;
+        nextDateString = occurrences[0].dateString;
+      }
+    }
+
+    // Susun penjelasan detail berdasarkan frekuensi kemunculan
+    let penjelasanDetail = rawPenjelasan;
+    if (occurrences.length === 2) {
+      penjelasanDetail = `${rawPenjelasan} Dalam tahun ${year}, hari raya ini jatuh sebanyak 2 kali (siklus 210 hari Pawukon berulang dua kali dalam satu tahun kalender Masehi).`;
+    } else if (occurrences.length === 1) {
+      penjelasanDetail = `${rawPenjelasan} Dalam tahun ${year}, hari raya ini jatuh sebanyak 1 kali.`;
+    } else if (occurrences.length > 2) {
+      penjelasanDetail = `${rawPenjelasan} Dalam tahun ${year}, hari raya ini diperingati secara berkala (${occurrences.length} kali dalam setahun).`;
+    }
+
     return {
       upacaraId,
-      nextDate: null,
-      nextDateString: null,
-      penjelasanPenentuan: penjelasan,
-      isAvailable: false,
+      year,
+      occurrences,
+      totalOccurrences: occurrences.length,
+      nextDate,
+      nextDateString,
+      penjelasanPenentuan: rawPenjelasan,
+      penjelasanDetail,
+      isAvailable: occurrences.length > 0,
     };
   }
-}
 
+  /**
+   * Menentukan tanggal hari raya berikutnya dan deskripsi penentuannya.
+   */
+  public async resolveNext(
+    upacaraId: number,
+    options?: HariRayaResolveOptions
+  ): Promise<HariRayaResolveResult> {
+    const year =
+      options?.year ??
+      (options?.referenceDate
+        ? options.referenceDate.getFullYear()
+        : new Date().getFullYear());
+
+    return this.resolveForYear(upacaraId, year, options);
+  }
+}

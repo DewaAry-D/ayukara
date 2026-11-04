@@ -15,14 +15,14 @@ export interface BantenItemResolved {
     sumberJudul?: string | null;
     sumberUrl?: string | null;
   } | null;
-  status: 'verified' | 'unverified';
+  status: 'verified' | 'unverified' | 'rejected';
 }
 
 export interface BantenSetResolved {
   upacaraId: number;
   tingkatanId: number;
   asal: 'manual' | 'internet';
-  status: 'verified' | 'unverified';
+  status: 'verified' | 'unverified' | 'rejected';
   items: BantenItemResolved[];
   isFound: boolean;
   message?: string;
@@ -59,7 +59,7 @@ export interface DbBantenSet {
   upacara_id: number;
   tingkatan_id: number;
   asal: 'manual' | 'internet';
-  status: 'verified' | 'unverified';
+  status: 'verified' | 'unverified' | 'rejected';
   items?: DbBantenSetItem[];
 }
 

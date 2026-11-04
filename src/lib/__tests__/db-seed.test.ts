@@ -17,11 +17,17 @@ describe('Database DDL & Seeder Integrity Test (PGlite)', () => {
   it('ensures seed files do not contain destructive DDL (DROP/CREATE/ALTER)', () => {
     const seedBantenSql = fs.readFileSync(path.resolve('docs/seed_banten.sql'), 'utf-8');
     const seedWarigaSql = fs.readFileSync(path.resolve('docs/seed_wariga.sql'), 'utf-8');
+    const seedHariRayaSql = fs.readFileSync(path.resolve('docs/seed_hari_raya.sql'), 'utf-8');
+    const seedBantenV2Sql = fs.readFileSync(path.resolve('docs/seed_banten_v2.sql'), 'utf-8');
+    const seedHariRayaV2Sql = fs.readFileSync(path.resolve('docs/seed_hari_raya_v2.sql'), 'utf-8');
 
     // Should not contain CREATE TABLE, DROP TABLE, ALTER TABLE
     const ddlPattern = /\b(CREATE\s+TABLE|DROP\s+TABLE|ALTER\s+TABLE)\b/i;
     expect(seedBantenSql).not.toMatch(ddlPattern);
     expect(seedWarigaSql).not.toMatch(ddlPattern);
+    expect(seedHariRayaSql).not.toMatch(ddlPattern);
+    expect(seedBantenV2Sql).not.toMatch(ddlPattern);
+    expect(seedHariRayaV2Sql).not.toMatch(ddlPattern);
   });
 
   it('runs initial DDL migration successfully on clean database', async () => {
@@ -165,9 +171,61 @@ describe('Database DDL & Seeder Integrity Test (PGlite)', () => {
     const countSumberTotal = await db.query<{ count: string }>('SELECT COUNT(*) FROM sumber;');
     expect(Number(countSumberTotal.rows[0].count)).toBe(2);
 
-    // hari_raya_aturan must be 0 rows by design
+    // hari_raya_aturan must be 0 rows before 03-seed-hari-raya
     const countHariRayaAturan = await db.query<{ count: string }>('SELECT COUNT(*) FROM hari_raya_aturan;');
     expect(Number(countHariRayaAturan.rows[0].count)).toBe(0);
+  });
+
+  it('runs 03-seed-hari-raya successfully', async () => {
+    const seederHariRaya = require('../db/seeders/03-seed-hari-raya.js');
+    const queryInterface = {
+      sequelize: {
+        query: async (sql: string) => {
+          return db.exec(sql);
+        },
+      },
+    };
+
+    await seederHariRaya.up(queryInterface);
+
+    const countHariRayaAturan = await db.query<{ count: string }>('SELECT COUNT(*) FROM hari_raya_aturan;');
+    expect(Number(countHariRayaAturan.rows[0].count)).toBe(20);
+
+    const countKutipanTotal = await db.query<{ count: string }>('SELECT COUNT(*) FROM kutipan;');
+    // 172 from banten + 220 from wariga + 8 from hari raya = 400
+    expect(Number(countKutipanTotal.rows[0].count)).toBe(400);
+
+    const countSumberTotal = await db.query<{ count: string }>('SELECT COUNT(*) FROM sumber;');
+    // 2 from banten/wariga + 6 from hari raya = 8
+    expect(Number(countSumberTotal.rows[0].count)).toBe(8);
+  });
+
+  it('runs 04-seed-banten-v2 and 05-seed-hari-raya-v2 successfully', async () => {
+    const seederBantenV2 = require('../db/seeders/04-seed-banten-v2.js');
+    const seederHariRayaV2 = require('../db/seeders/05-seed-hari-raya-v2.js');
+    const queryInterface = {
+      sequelize: {
+        query: async (sql: string) => {
+          return db.exec(sql);
+        },
+      },
+    };
+
+    await seederBantenV2.up(queryInterface);
+
+    const countUpacara = await db.query<{ count: string }>('SELECT COUNT(*) FROM upacara;');
+    expect(Number(countUpacara.rows[0].count)).toBe(41); // 28 + 13
+
+    const countBanten = await db.query<{ count: string }>('SELECT COUNT(*) FROM banten;');
+    expect(Number(countBanten.rows[0].count)).toBe(207); // 126 + 81
+
+    const countBantenSet = await db.query<{ count: string }>('SELECT COUNT(*) FROM banten_set;');
+    expect(Number(countBantenSet.rows[0].count)).toBe(71); // 50 + 21
+
+    await seederHariRayaV2.up(queryInterface);
+
+    const countHariRayaAturan = await db.query<{ count: string }>('SELECT COUNT(*) FROM hari_raya_aturan;');
+    expect(Number(countHariRayaAturan.rows[0].count)).toBe(35); // 20 + 15
   });
 
   it('enforces schema constraints (CHECK and FOREIGN KEY)', async () => {
