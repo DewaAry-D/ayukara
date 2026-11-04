@@ -66,6 +66,30 @@ export class BantenRepository {
     });
   }
 
+  async getWhitelistedDomains(): Promise<string[]> {
+    const sumbers = await Sumber.findAll({
+      where: { domain_diizinkan: true },
+      attributes: ['url'],
+    });
+
+    const domains = new Set<string>();
+    domains.add('babadbali.com');
+    domains.add('kalenderbali.org');
+    domains.add('phdi.or.id');
+
+    for (const s of sumbers) {
+      if (s.url) {
+        try {
+          const parsed = new URL(s.url);
+          domains.add(parsed.hostname);
+        } catch {
+          // ignore invalid
+        }
+      }
+    }
+    return Array.from(domains);
+  }
+
   async findBantenByNameOrAlias(name: string): Promise<Banten | null> {
     const trimmed = name.trim();
     return Banten.findOne({
