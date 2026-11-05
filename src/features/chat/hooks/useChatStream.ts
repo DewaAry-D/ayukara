@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ChatCitation, SuggestedPlan } from '@/lib/chat/ChatService';
 
 export interface UiChatMessage {
@@ -16,7 +16,26 @@ export function useChatStream() {
   const [messages, setMessages] = useState<UiChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('ayukara-chat');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setMessages(parsed);
+      } catch {
+        sessionStorage.removeItem('ayukara-chat');
+      }
+    }
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready || isLoading) return;
+    sessionStorage.setItem('ayukara-chat', JSON.stringify(messages));
+  }, [messages, isLoading, ready]);
 
   const sendMessage = useCallback(
     async (userText: string) => {
@@ -140,6 +159,7 @@ export function useChatStream() {
       abortControllerRef.current.abort();
     }
     setMessages([]);
+    sessionStorage.removeItem('ayukara-chat'); 
     setError(null);
     setIsLoading(false);
   }, []);

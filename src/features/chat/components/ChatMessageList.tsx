@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
 import { UiChatMessage } from '../hooks/useChatStream';
 import { CreatePlanCta } from './CreatePlanCta';
 
@@ -16,95 +18,51 @@ export function ChatMessageList({ messages, isLoading }: ChatMessageListProps) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  function renderInlineTokens(text: string) {
-    if (!text) return null;
-
-    // Bersihkan sitasi ganda berulang
-    const cleanedText = text.replace(/\[(\d+)\](?:\s*[,;]?\s*\[\1\])+/g, '[$1]');
-    const tokens = cleanedText.split(/(\[[^\]]+\]\([^\)]+\)|\*\*[^*]+?\*\*|\[\d+\])/g);
-
-    return tokens.map((token, i) => {
-      // 1. Markdown link [label](url)
-      const linkMatch = token.match(/^\[([^\]]+)\]\((https?:\/\/[^\)]+)\)$/);
-      if (linkMatch) {
-        return (
-          <a
-            key={i}
-            href={linkMatch[2]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#C9A24A] hover:underline underline-offset-2 font-medium inline-flex items-center gap-0.5"
-          >
-            <span>{linkMatch[1]}</span>
-            <svg className="w-3 h-3 inline-block opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-          </a>
-        );
-      }
-
-      // 2. Bold text
-      if (token.startsWith('**') && token.endsWith('**') && token.length > 4) {
-        return (
-          <strong key={i} className="font-bold text-white">
-            {token.slice(2, -2)}
-          </strong>
-        );
-      }
-
-      // 3. Sitasi [1]
-      const citationMatch = token.match(/^\[(\d+)\]$/);
-      if (citationMatch) {
-        return (
-          <sup key={i} className="px-0.5 text-[#C9A24A] font-bold text-[10px]">
-            [{citationMatch[1]}]
-          </sup>
-        );
-      }
-
-      return <span key={i}>{token}</span>;
-    });
-  }
-
   function renderFormattedContent(text: string) {
     if (!text) return null;
-
-    const lines = text
-      .split(/\n+/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-
+    // Ubah sitasi [1] jadi link khusus supaya bisa diberi gaya emas
+    const prepared = text
+      .replace(/\[(\d+)\](?:\s*[,;]?\s*\[\1\])+/g, '[$1]')
+      .replace(/\[(\d+)\](?!\()/g, '[[$1]](#cite-$1)');
     return (
-      <div className="space-y-2.5">
-        {lines.map((line, idx) => {
-          if (line.startsWith('• ') || line.startsWith('- ')) {
-            const itemText = line.replace(/^[•\-]\s*/, '').trim();
-            return (
-              <div key={idx} className="flex items-start gap-2 pl-1">
+      <div className="space-y-2.5 text-xs sm:text-sm text-stone-200 leading-relaxed">
+        <ReactMarkdown
+          components={{
+            h1: ({ children }) => <h4 className="text-sm sm:text-base font-bold text-[#C9A24A] pt-2">{children}</h4>,
+            h2: ({ children }) => <h4 className="text-sm sm:text-base font-bold text-[#C9A24A] pt-2">{children}</h4>,
+            h3: ({ children }) => <h4 className="text-sm sm:text-base font-bold text-[#C9A24A] pt-2">{children}</h4>,
+            p: ({ children }) => {
+              const plain = String(children);
+              if (plain.includes('sulinggih atau pemangku')) {
+                return <p className="text-[11px] text-[#F3E9CF]/80 italic pt-1 border-t border-white/10">{children}</p>;
+              }
+              return <p>{children}</p>;
+            },
+            ul: ({ children }) => <ul className="space-y-1.5 pl-1">{children}</ul>,
+            ol: ({ children }) => <ol className="list-decimal list-inside space-y-1.5 pl-1 marker:text-[#C9A24A] marker:font-bold">{children}</ol>,
+            li: ({ children }) => (
+              <li className="flex items-start gap-2">
                 <span className="text-[#C9A24A] font-bold text-xs shrink-0">•</span>
-                <div className="text-xs sm:text-sm text-stone-200 leading-relaxed">
-                  {renderInlineTokens(itemText)}
-                </div>
-              </div>
-            );
-          }
-
-          if (line.includes('sulinggih atau pemangku')) {
-            return (
-              <p key={idx} className="text-[11px] text-[#F3E9CF]/80 italic pt-1 border-t border-white/10">
-                {renderInlineTokens(line)}
-              </p>
-            );
-          }
-
-          return (
-            <p key={idx} className="text-xs sm:text-sm text-stone-200 leading-relaxed">
-              {renderInlineTokens(line)}
-            </p>
-          );
-        })}
+                <div>{children}</div>
+              </li>
+            ),
+            strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+            em: ({ children }) => <em className="italic text-[#F3E9CF]">{children}</em>,
+            a: ({ href, children }) => {
+              if (href?.startsWith('#cite-')) {
+                return <sup className="px-0.5 text-[#C9A24A] font-bold text-[10px]">{children}</sup>;
+              }
+              return (
+                <a href={href} target="_blank" rel="noopener noreferrer"
+                   className="text-[#C9A24A] hover:underline underline-offset-2 font-medium">
+                  {children} ↗
+                </a>
+              );
+            },
+          }}
+        >
+          {prepared}
+        </ReactMarkdown>
       </div>
     );
   }
@@ -121,10 +79,14 @@ export function ChatMessageList({ messages, isLoading }: ChatMessageListProps) {
           >
             {/* Assistant Avatar */}
             {!isUser && (
-              <div className="w-8 h-8 rounded-xl bg-white/[0.08] border border-white/15 flex items-center justify-center text-[#C9A24A] shrink-0 mt-0.5">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9L12 2Z" />
-                </svg>
+              <div className="w-8 h-8 shrink-0 mt-0.5 flex items-center justify-center">
+                <Image
+                  src="/images/logo_ayukara_hd.png"
+                  alt=""
+                  width={64}
+                  height={64}
+                  className="w-8 h-8 object-contain scale-150"
+                />
               </div>
             )}
 

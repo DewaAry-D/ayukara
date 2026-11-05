@@ -16,7 +16,7 @@ export function Navbar() {
 
   return (
     <header
-      className={`w-full z-30 transition-colors ${
+      className={`fixed top-0 inset-x-0 w-full z-30 transition-colors ${
         isChatActive
           ? 'bg-[#1F3B3A] border-b border-white/10'
           : 'bg-[#F5F0E6] border-b border-[#DDD3C1]/60'
@@ -26,19 +26,14 @@ export function Navbar() {
         {/* Logo Lockup */}
         <Link href="/" className="flex items-center gap-3 group">
           {isChatActive ? (
-            <div className="flex items-center gap-3">
-              <Image
-                src="/images/logo_ayukara.png"
-                alt="Ayukara"
-                width={36}
-                height={36}
-                className="h-8 sm:h-9 w-auto object-contain"
-                priority
-              />
-              <span className="font-serif font-bold text-lg sm:text-xl tracking-wider text-white uppercase">
-                AYUKARA
-              </span>
-            </div>
+            <Image
+              src="/images/logo_ayukara_navbar.png"
+              alt="Ayukara"
+              width={180}
+              height={52}
+              className="h-11 sm:h-12 w-auto object-contain scale-85 origin-left translate-x-2.5"
+              priority
+            />
           ) : (
             <Image
               src="/images/logo_with_text.png"
