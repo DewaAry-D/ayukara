@@ -129,7 +129,7 @@ export default async function PlannerResultPage({
           </div>
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 space-y-3">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 lg:px-20 space-y-3">
           <div className="text-xs font-semibold tracking-wider uppercase text-[#A8543A]">
             LANGKAH 2 DARI 2 · HASIL
           </div>
@@ -141,8 +141,8 @@ export default async function PlannerResultPage({
       </section>
 
       {/* RESULT BODY SECTION (Deep Forest Green #1F3B3A) */}
-      <section className="w-full py-10 px-6 sm:px-8">
-        <div className="max-w-6xl mx-auto space-y-8">
+      <section className="w-full py-10 px-6 sm:px-12 lg:px-20">
+        <div className="max-w-7xl mx-auto space-y-8">
           {/* Top Parameter Bar: Pills on Left, Ekspor PDF on Right */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2.5">

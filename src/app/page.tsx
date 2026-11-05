@@ -69,12 +69,12 @@ export default function HomePage() {
             </div>
 
             {/* CTA Button */}
-            <div className="pt-2">
+            <div className="w-full max-w-xl flex justify-center pt-2">
               <Link
                 href="/planner"
-                className="inline-flex items-center justify-center px-10 py-3.5 rounded-full bg-[#A8543A] hover:bg-[#8f432d] text-white font-semibold text-base shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                className="w-full flex items-center justify-center px-8 py-4 rounded-full bg-[#A8543A] hover:bg-[#8f432d] text-white font-semibold text-base sm:text-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer text-center tracking-wide"
               >
-                Mulai
+                Mulai Sekarang
               </Link>
             </div>
           </div>
