@@ -21,8 +21,7 @@ export class TavilySearchClient implements SearchClient {
       throw new Error('Tavily API key is not configured.');
     }
 
-    const maskedKey = `${this.apiKey.substring(0, 8)}...`;
-    console.log(`[Ayukara TavilySearch] Mengirim pencarian web: "${query}" (key: ${maskedKey}, limit: ${opts?.maxResults || 5})`);
+    console.log(`[Ayukara TavilySearch] Mengirim pencarian web: "${query}" (limit: ${opts?.maxResults || 5})`);
 
     const payload: Record<string, unknown> = {
       api_key: this.apiKey,

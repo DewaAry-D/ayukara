@@ -59,12 +59,8 @@ export class OpenAiLlmClient implements LlmClient {
 
   public async complete(args: LlmCompletionArgs): Promise<LlmCompletionResult> {
     const targetEndpoint = this.baseURL || 'https://api.openai.com/v1';
-    const maskedKey =
-      this.apiKey && this.apiKey !== 'dummy-key-for-test'
-        ? `${this.apiKey.substring(0, 7)}...`
-        : 'TIDAK TERPASANG';
     console.log(
-      `[Ayukara LLM] Mengirim permintaan ke ${targetEndpoint} (model: ${this.model}, key: ${maskedKey})`
+      `[Ayukara LLM] Mengirim permintaan ke ${targetEndpoint} (model: ${this.model})`
     );
 
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
@@ -122,8 +118,7 @@ export class OpenAiLlmClient implements LlmClient {
 
     // Jika respons teks dari proxy/gateway sebenarnya adalah pesan error otentikasi upstream (misal 9Router)
     if (
-      content.trim().startsWith('⚠️') ||
-      /invalid api key\. please check that your api key is correct/i.test(content)
+      /invalid api key|unauthorized|error:|failed to authenticate/i.test(content)
     ) {
       throw new Error(content.trim());
     }

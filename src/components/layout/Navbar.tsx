@@ -15,18 +15,40 @@ export function Navbar() {
   const isChatActive = pathname.startsWith('/chat');
 
   return (
-    <header className="w-full bg-[#F5F0E6] border-b border-[#DDD3C1]/60 z-30 transition-colors">
-      <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-20 h-24 sm:h-28 flex items-center justify-between">
+    <header
+      className={`w-full z-30 transition-colors ${
+        isChatActive
+          ? 'bg-[#1F3B3A] border-b border-white/10'
+          : 'bg-[#F5F0E6] border-b border-[#DDD3C1]/60'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-20 h-20 sm:h-24 flex items-center justify-between">
         {/* Logo Lockup */}
         <Link href="/" className="flex items-center gap-3 group">
-          <Image
-            src="/images/logo_with_text.png"
-            alt="Ayukara - Pendamping Perencanaan Upacara Yadnya"
-            width={180}
-            height={52}
-            className="h-11 sm:h-12 w-auto object-contain"
-            priority
-          />
+          {isChatActive ? (
+            <div className="flex items-center gap-3">
+              <Image
+                src="/images/logo_ayukara.png"
+                alt="Ayukara"
+                width={36}
+                height={36}
+                className="h-8 sm:h-9 w-auto object-contain"
+                priority
+              />
+              <span className="font-serif font-bold text-lg sm:text-xl tracking-wider text-white uppercase">
+                AYUKARA
+              </span>
+            </div>
+          ) : (
+            <Image
+              src="/images/logo_with_text.png"
+              alt="Ayukara - Pendamping Perencanaan Upacara Yadnya"
+              width={180}
+              height={52}
+              className="h-11 sm:h-12 w-auto object-contain"
+              priority
+            />
+          )}
         </Link>
 
         {/* Desktop Navigation Links */}
@@ -38,9 +60,13 @@ export function Navbar() {
           >
             <span
               className={`transition-colors ${
-                isBerandaActive
-                  ? 'font-bold text-[#A8543A]'
-                  : 'font-medium text-[#1F3B3A] hover:text-[#A8543A]'
+                isChatActive
+                  ? isBerandaActive
+                    ? 'font-bold text-[#C9A24A]'
+                    : 'font-medium text-stone-300 hover:text-white'
+                  : isBerandaActive
+                    ? 'font-bold text-[#A8543A]'
+                    : 'font-medium text-[#1F3B3A] hover:text-[#A8543A]'
               }`}
             >
               Beranda
@@ -57,9 +83,13 @@ export function Navbar() {
           >
             <span
               className={`transition-colors ${
-                isPerencanaActive
-                  ? 'font-bold text-[#A8543A]'
-                  : 'font-medium text-[#1F3B3A] hover:text-[#A8543A]'
+                isChatActive
+                  ? isPerencanaActive
+                    ? 'font-bold text-[#C9A24A]'
+                    : 'font-medium text-stone-300 hover:text-white'
+                  : isPerencanaActive
+                    ? 'font-bold text-[#A8543A]'
+                    : 'font-medium text-[#1F3B3A] hover:text-[#A8543A]'
               }`}
             >
               Perencana
@@ -77,7 +107,7 @@ export function Navbar() {
             <span
               className={`transition-colors ${
                 isChatActive
-                  ? 'font-bold text-[#A8543A]'
+                  ? 'font-bold text-[#C9A24A]'
                   : 'font-medium text-[#1F3B3A] hover:text-[#A8543A]'
               }`}
             >
@@ -94,7 +124,11 @@ export function Navbar() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2.5 rounded-xl border border-[#DDD3C1] text-[#1F3B3A] hover:bg-[#EDE6D8] transition-colors"
+            className={`p-2.5 rounded-xl border transition-colors ${
+              isChatActive
+                ? 'border-white/20 text-white hover:bg-white/10'
+                : 'border-[#DDD3C1] text-[#1F3B3A] hover:bg-[#EDE6D8]'
+            }`}
             aria-label="Menu navigasi"
           >
             {mobileMenuOpen ? (
@@ -112,12 +146,22 @@ export function Navbar() {
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-[#DDD3C1] bg-[#F5F0E6] px-6 py-4 space-y-3">
+        <div
+          className={`md:hidden border-t px-6 py-4 space-y-3 ${
+            isChatActive
+              ? 'border-white/10 bg-[#1F3B3A] text-white'
+              : 'border-[#DDD3C1] bg-[#F5F0E6] text-[#1F3B3A]'
+          }`}
+        >
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
             className={`block py-2 text-sm ${
-              isBerandaActive ? 'font-bold text-[#A8543A]' : 'font-medium text-[#1F3B3A]'
+              isBerandaActive
+                ? 'font-bold text-[#C9A24A]'
+                : isChatActive
+                  ? 'font-medium text-stone-300'
+                  : 'font-medium text-[#1F3B3A]'
             }`}
           >
             Beranda
@@ -126,7 +170,11 @@ export function Navbar() {
             href="/planner"
             onClick={() => setMobileMenuOpen(false)}
             className={`block py-2 text-sm ${
-              isPerencanaActive ? 'font-bold text-[#A8543A]' : 'font-medium text-[#1F3B3A]'
+              isPerencanaActive
+                ? 'font-bold text-[#C9A24A]'
+                : isChatActive
+                  ? 'font-medium text-stone-300'
+                  : 'font-medium text-[#1F3B3A]'
             }`}
           >
             Perencana
@@ -135,7 +183,7 @@ export function Navbar() {
             href="/chat"
             onClick={() => setMobileMenuOpen(false)}
             className={`block py-2 text-sm ${
-              isChatActive ? 'font-bold text-[#A8543A]' : 'font-medium text-[#1F3B3A]'
+              isChatActive ? 'font-bold text-[#C9A24A]' : 'font-medium text-[#1F3B3A]'
             }`}
           >
             Chat AI

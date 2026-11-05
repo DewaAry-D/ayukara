@@ -1,6 +1,16 @@
+'use client';
+
 import React from 'react';
+import { usePathname } from 'next/navigation';
 
 export function Footer() {
+  const pathname = usePathname();
+
+  // FR-C: Jangan tampilkan footer di halaman chat sesuai instruksi user
+  if (pathname === '/chat' || pathname.startsWith('/chat')) {
+    return null;
+  }
+
   return (
     <footer className="w-full bg-[#EDE6D8] border-t border-[#DDD3C1]/80 py-12 px-6 text-center text-[#5B6B66] font-sans">
       <div className="max-w-4xl mx-auto space-y-4">
@@ -20,7 +30,7 @@ export function Footer() {
 
         {/* Copyright */}
         <p className="text-[11px] text-[#8A938C] tracking-wide pt-1">
-          © 2026 Ayukara · Bali DigiFest 2026
+          © 2026 Ayukara
         </p>
       </div>
     </footer>

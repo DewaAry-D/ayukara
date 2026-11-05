@@ -185,8 +185,7 @@ ${citationsContext || 'Tidak ada sitasi teks'}`;
 
     // Deteksi jika respon proxy/LLM adalah pesan error otentikasi (misal balasan dari gateway 9router)
     const isErrorText =
-      /invalid api key|unauthorized|error:|failed to authenticate|incorrect api key/i.test(summaryText) ||
-      summaryText.trim().startsWith('⚠️');
+      /invalid api key|unauthorized|error:|failed to authenticate|incorrect api key/i.test(summaryText);
 
     if (isErrorText) {
       summaryText = `Rencana upacara ${input.upacaraNama} (${input.tingkatanNama || 'Umum'}) telah disusun untuk tanggal ${input.tanggalInfo.tanggal || 'yang dipilih'}. Diperlukan ${input.bantenItems.length} sarana banten sesuai pedoman upakara yadnya Hindu Bali.`;
