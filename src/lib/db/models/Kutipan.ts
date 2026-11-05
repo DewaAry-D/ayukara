@@ -1,4 +1,5 @@
-import { Model, DataTypes, Sequelize, InferAttributes, InferCreationAttributes } from 'sequelize';
+import { Model, DataTypes, Sequelize, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
+import type { Sumber } from './Sumber';
 
 export class Kutipan extends Model<
   InferAttributes<Kutipan>,
@@ -8,6 +9,7 @@ export class Kutipan extends Model<
   declare sumber_id: number;
   declare teks: string;
   declare halaman: string | null;
+  declare sumber?: NonAttribute<Sumber>;
 
   static initModel(sequelize: Sequelize): typeof Kutipan {
     return Kutipan.init(

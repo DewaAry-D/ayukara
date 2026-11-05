@@ -102,7 +102,7 @@ export const UPACARA_KNOWLEDGE_LIST: UpacaraKnowledgeEntry[] = [
   {
     id: 13,
     namaResmi: 'Ngeringkes / Atiwa-tiwa',
-    aliases: ['ngeringkes', 'atiwa-tiwa', 'atiwa tiwa', 'ngaben', 'pitra yadnya', 'pelebon', 'kremasi', 'sawa wedana', 'sawa', 'kematian'],
+    aliases: ['ngeringkes', 'atiwa-tiwa', 'atiwa tiwa', 'ngaben', 'pitra yadnya', 'pelebon', 'kremasi', 'sawa wedana', 'sawa', 'kematian', 'meninggal', 'wafat'],
     keywords: ['ngeringkes', 'atiwa', 'ngaben', 'pelebon', 'kremasi', 'jenazah', 'mayat', 'meninggal', 'wafat', 'kematian', 'sawa', 'pitra'],
     deskripsiBudaya: 'Penyucian dan pembakaran jenazah untuk mengembalikan unsur Panca Maha Bhuta ke alam semesta',
   },

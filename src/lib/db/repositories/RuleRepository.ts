@@ -154,6 +154,13 @@ export class RuleRepository implements IHariRayaRuleRepository, IUpacaraMatchRep
 
     const aturans = await AturanDewasaUpacara.findAll({
       where: options?.verifiedOnly ? { status: 'verified' } : {},
+      include: [
+        {
+          model: Kutipan,
+          as: 'kutipan',
+          include: [{ model: Sumber, as: 'sumber' }],
+        },
+      ],
     });
 
     return {
@@ -178,6 +185,9 @@ export class RuleRepository implements IHariRayaRuleRepository, IUpacaraMatchRep
         if (a.prioritas >= 20) level = RuleHierarchyLevel.SASIH;
         else if (a.prioritas >= 10) level = RuleHierarchyLevel.WUKU;
 
+        const k = a.kutipan;
+        const s = k?.sumber;
+
         return {
           id: a.id,
           dewasa_id: a.dewasa_id,
@@ -187,7 +197,16 @@ export class RuleRepository implements IHariRayaRuleRepository, IUpacaraMatchRep
           level,
           status: a.status,
           kutipan_id: a.kutipan_id,
-          catatan: a.catatan,
+          catatan: a.catatan
+            ? a.catatan.replace(/^otomatis\s+dari\s+teks:\s*/i, '').trim()
+            : null,
+          kutipan: k
+            ? {
+                teks: k.teks ? k.teks.replace(/^otomatis\s+dari\s+teks:\s*/i, '').trim() : '',
+                sumberJudul: s?.judul || 'Lontar Wariga Dewasa',
+                sumberUrl: s?.url || null,
+              }
+            : null,
         };
       }),
     };

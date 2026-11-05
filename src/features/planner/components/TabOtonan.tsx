@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { calculateOtonanAction } from '../actions';
 import { CalculateOtonanActionResult } from '../types';
 import { TingkatanCards } from './TingkatanCards';
+import { LoadingModal } from './LoadingModal';
 
 export function TabOtonan() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export function TabOtonan() {
   const [personName, setPersonName] = useState('');
   const [birthDate, setBirthDate] = useState('2026-05-04');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Result
@@ -73,6 +75,7 @@ export function TabOtonan() {
       tingkatanId: String(tingkatanId),
     });
 
+    setIsNavigating(true);
     router.push(`/planner/result?${params.toString()}`);
   }
 
@@ -315,6 +318,14 @@ export function TabOtonan() {
           Lihat Kebutuhan Banten →
         </button>
       </div>
+
+      {/* Loading Modal saat navigasi ke Result */}
+      <LoadingModal
+        isOpen={isNavigating}
+        onCancel={() => setIsNavigating(false)}
+        title="Menyiapkan kebutuhan banten..."
+        subtitle="Ayukara sedang memproses rencana Anda."
+      />
     </div>
   );
 }

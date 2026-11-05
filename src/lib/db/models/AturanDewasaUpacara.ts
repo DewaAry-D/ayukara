@@ -1,4 +1,5 @@
-import { Model, DataTypes, Sequelize, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { Model, DataTypes, Sequelize, InferAttributes, InferCreationAttributes, CreationOptional, NonAttribute } from 'sequelize';
+import type { Kutipan } from './Kutipan';
 
 export class AturanDewasaUpacara extends Model<
   InferAttributes<AturanDewasaUpacara>,
@@ -13,6 +14,7 @@ export class AturanDewasaUpacara extends Model<
   declare kutipan_id: number;
   declare status: CreationOptional<'unverified' | 'verified' | 'rejected' | 'konflik'>;
   declare catatan: string | null;
+  declare kutipan?: NonAttribute<Kutipan>;
 
   static initModel(sequelize: Sequelize): typeof AturanDewasaUpacara {
     return AturanDewasaUpacara.init(

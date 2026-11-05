@@ -19,13 +19,13 @@ export class UpstashPriceCache implements PriceCache {
     }
   }
 
-  private makeKey(bantenId: number, tanggalWita: string): string {
-    return `harga:${bantenId}:${tanggalWita}`;
+  private makeKey(id: number | string, tanggalWita: string): string {
+    return `harga:${id}:${tanggalWita}`;
   }
 
-  public async get(bantenId: number, tanggalWita: string): Promise<PriceEntry | null> {
+  public async get(id: number | string, tanggalWita: string): Promise<PriceEntry | null> {
     try {
-      const key = this.makeKey(bantenId, tanggalWita);
+      const key = this.makeKey(id, tanggalWita);
       const data = await this.redis.get<PriceEntry>(key);
       return data || null;
     } catch (error) {
@@ -35,13 +35,13 @@ export class UpstashPriceCache implements PriceCache {
   }
 
   public async set(
-    bantenId: number,
+    id: number | string,
     tanggalWita: string,
     value: PriceEntry,
     expireAt: Date
   ): Promise<void> {
     try {
-      const key = this.makeKey(bantenId, tanggalWita);
+      const key = this.makeKey(id, tanggalWita);
       const expireEpochSeconds = Math.floor(expireAt.getTime() / 1000);
       await this.redis.set(key, JSON.stringify(value), {
         exat: expireEpochSeconds,

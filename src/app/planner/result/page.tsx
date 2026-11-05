@@ -1,8 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { DateSection } from '@/features/planner/components/DateSection';
-import { BantenTable } from '@/features/planner/components/BantenTable';
-import { AiSummaryBox } from '@/features/planner/components/AiSummaryBox';
+import { BantenWithSummary } from '@/features/planner/components/BantenWithSummary';
 import { ExportPdfButton } from '@/features/planner/components/ExportPdfButton';
 import { loadPlanResult } from '@/features/planner/resultLoader';
 
@@ -98,8 +97,8 @@ export default async function PlannerResultPage({
   return (
     <div className="w-full min-h-screen bg-[#1F3B3A]">
       {/* TOP HEADER SECTION (#F5F0E6 with wave landscape) */}
-      <section className="relative w-full bg-[#F5F0E6] pt-10 pb-16 sm:pb-24 overflow-hidden border-b border-[#DDD3C1]/50">
-        <div className="absolute inset-x-0 bottom-0 pointer-events-none w-full h-[50%] flex flex-col justify-end">
+      <section className="relative w-full bg-[#F5F0E6] pt-10 pb-16 sm:pb-24 overflow-x-clip">
+        <div className="absolute inset-x-0 -bottom-[2px] pointer-events-none w-full h-[50%] flex flex-col justify-end">
           <div className="w-full h-full relative">
             <svg
               className="absolute bottom-0 w-full h-[85%] text-[#8EA89D]/40"
@@ -118,13 +117,15 @@ export default async function PlannerResultPage({
               <path d="M0,96 C280,168 560,72 840,144 C1120,216 1320,120 1440,144 L1440,240 L0,240 Z" />
             </svg>
             <svg
-              className="absolute bottom-0 w-full h-[35%] text-[#1F3B3A]"
+              className="absolute -bottom-[2px] w-full h-[calc(35%+4px)] text-[#1F3B3A]"
               viewBox="0 0 1440 240"
               preserveAspectRatio="none"
               fill="currentColor"
             >
-              <path d="M0,120 C360,48 720,168 1080,96 C1260,60 1380,105 1440,120 L1440,240 L0,240 Z" />
+              <path d="M0,120 C360,48 720,168 1080,96 C1260,60 1380,105 1440,120 L1440,245 L0,245 Z" />
             </svg>
+            {/* Strip penutup agar tidak ada celah garis putih/subpixel dari background beige */}
+            <div className="absolute inset-x-0 -bottom-[2px] h-2 bg-[#1F3B3A]" />
           </div>
         </div>
 
@@ -194,24 +195,35 @@ export default async function PlannerResultPage({
             </div>
 
             {/* Right Column: Kebutuhan Banten + Estimasi Biaya & Penjelasan AI */}
-            <div className="lg:col-span-6 space-y-6">
-              <BantenTable
-                items={resultData.bantenItems}
-                tingkatanNama={resultData.tingkatanNama}
-                prices={resultData.prices}
-                totalMin={resultData.totalPrice.totalMin}
-                totalMax={resultData.totalPrice.totalMax}
-              />
-
-              <AiSummaryBox
-                summaryText={resultData.aiSummary}
-                citations={resultData.citations}
+            <div className="lg:col-span-6">
+              <BantenWithSummary
+                bantenTableProps={{
+                  upacaraId: resultData.upacaraId,
+                  upacaraNama: resultData.upacaraNama,
+                  items: resultData.bantenItems,
+                  tingkatanNama: resultData.tingkatanNama,
+                  prices: resultData.prices,
+                  totalMin: resultData.totalPrice.totalMin,
+                  totalMax: resultData.totalPrice.totalMax,
+                  packageSourceUrl: resultData.packagePrice?.urlSumber,
+                  packageKutipan: resultData.packagePrice?.kutipan,
+                  rangkaianGroups: resultData.rangkaianGroups,
+                  locationGroups: resultData.locationGroups,
+                  availableTingkatan: resultData.availableTingkatan,
+                  catatanTingkatan: resultData.catatanTingkatan,
+                }}
+                aiSummaryProps={{
+                  summaryText: resultData.aiSummary,
+                  citations: resultData.citations,
+                  totalMin: resultData.totalPrice.totalMin,
+                  totalMax: resultData.totalPrice.totalMax,
+                }}
               />
             </div>
           </div>
 
           {/* Navigation Back */}
-          <div className="pt-6 border-t border-white/10 flex justify-between items-center">
+          <div className="pt-6 flex justify-between items-center">
             <Link
               href="/planner"
               className="text-xs text-stone-300 hover:text-white underline underline-offset-4"

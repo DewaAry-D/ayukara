@@ -94,16 +94,17 @@ export function DateSection(props: DateSectionProps) {
 
                 <p className="text-xs text-stone-200 leading-relaxed">
                   {bestRec.alasan.length > 0
-                    ? bestRec.alasan.join('; ')
+                    ? bestRec.alasan
+                        .map((a) => a.replace(/otomatis\s+dari\s+teks:\s*/gi, ''))
+                        .join('; ')
                     : 'Pertemuan wewaran baik untuk yadnya; tidak bertepatan dengan pantangan yang tercatat.'}
                 </p>
 
                 <div className="pt-1 flex items-center gap-2 text-xs text-stone-400">
-                  <span className="w-1 h-3.5 bg-[#C9A24A] rounded-full" />
                   <span>
                     {bestRec.aturanKutipan && bestRec.aturanKutipan[0]?.sumberJudul
                       ? bestRec.aturanKutipan[0].sumberJudul
-                      : 'Lontar Wariga Dewasa · hlm. 12'}
+                      : 'Kutipan Sastra Wariga'}
                   </span>
                 </div>
               </div>
@@ -138,16 +139,17 @@ export function DateSection(props: DateSectionProps) {
 
                 <p className="text-xs text-stone-300 leading-relaxed">
                   {alt.alasan.length > 0
-                    ? alt.alasan.join('; ')
+                    ? alt.alasan
+                        .map((a) => a.replace(/otomatis\s+dari\s+teks:\s*/gi, ''))
+                        .join('; ')
                     : 'Memenuhi syarat dewasa untuk manusa yadnya menurut aturan yang tersedia.'}
                 </p>
 
                 <div className="pt-1 flex items-center gap-2 text-xs text-stone-400">
-                  <span className="w-1 h-3.5 bg-[#C9A24A] rounded-full" />
                   <span>
                     {alt.aturanKutipan && alt.aturanKutipan[0]?.sumberJudul
                       ? alt.aturanKutipan[0].sumberJudul
-                      : 'Lontar Wariga Dewasa · hlm. 12'}
+                      : 'Kutipan Sastra Wariga'}
                   </span>
                 </div>
               </div>
@@ -202,7 +204,6 @@ export function DateSection(props: DateSectionProps) {
           )}
 
           <div className="pt-1 flex items-center gap-2 text-xs text-stone-400">
-            <span className="w-1 h-3.5 bg-[#C9A24A] rounded-full" />
             <span>Siklus 210 Hari Pawukon Bali</span>
           </div>
         </div>
@@ -246,7 +247,6 @@ export function DateSection(props: DateSectionProps) {
         </p>
 
         <div className="pt-1 flex items-center gap-2 text-xs text-stone-400">
-          <span className="w-1 h-3.5 bg-[#C9A24A] rounded-full" />
           <span>Kalender Bali & Tradisi Yadnya</span>
         </div>
       </div>

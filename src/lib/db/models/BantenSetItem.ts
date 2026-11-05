@@ -1,4 +1,7 @@
-import { Model, DataTypes, Sequelize, InferAttributes, InferCreationAttributes } from 'sequelize';
+import { Model, DataTypes, Sequelize, InferAttributes, InferCreationAttributes, NonAttribute } from 'sequelize';
+import type { Banten } from './Banten';
+import type { LokasiBanten } from './LokasiBanten';
+import type { Kutipan } from './Kutipan';
 
 export class BantenSetItem extends Model<
   InferAttributes<BantenSetItem>,
@@ -14,6 +17,9 @@ export class BantenSetItem extends Model<
   declare urutan: number | null;
   declare kutipan_id: number;
   declare catatan: string | null;
+  declare banten?: NonAttribute<Banten>;
+  declare lokasi?: NonAttribute<LokasiBanten>;
+  declare kutipan?: NonAttribute<Kutipan>;
 
   static initModel(sequelize: Sequelize): typeof BantenSetItem {
     return BantenSetItem.init(

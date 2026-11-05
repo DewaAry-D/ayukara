@@ -84,7 +84,7 @@ describe('PriceEstimator & Cache (Fase 4)', () => {
           fetchedAt: new Date().toISOString(),
           status: 'ditemukan',
         },
-        new Date('2026-11-04T15:59:59Z')
+        new Date(Date.now() + 24 * 60 * 60 * 1000)
       );
 
       const estimator = new PriceEstimator(cache, mockSearch, mockLlm, verifier);
@@ -183,6 +183,122 @@ describe('PriceEstimator & Cache (Fase 4)', () => {
       expect(result.items[0].status).toBe('ditemukan');
       expect(result.items[0].hargaMin).toBe(5000);
       expect(result.total.totalMin).toBe(10000);
+    });
+
+    it('mengestimasi harga paket upacara langsung dari nama upacara dan tingkatan jika ditemukan di web', async () => {
+      const cache = new InMemoryPriceCache();
+      const sourceContent =
+        'Untuk upacara Melaspas Bangunan tingkat Madya di Bali, estimasi paket banten berkisar Rp 2500000 hingga Rp 4000000 tergantung kelengkapan.';
+      const mockSearch = new MockSearchClient([
+        {
+          url: 'https://babadbali.com/paket-melaspas',
+          title: 'Paket Melaspas',
+          content: sourceContent,
+        },
+      ]);
+
+      const mockLlm = new MockLlmClient({
+        mockJson: {
+          hargaMin: 2500000,
+          hargaMax: 4000000,
+          kutipan:
+            'estimasi paket banten berkisar Rp 2500000 hingga Rp 4000000 tergantung kelengkapan.',
+          catatan: 'Paket banten madya lengkap',
+        },
+      });
+
+      const estimator = new PriceEstimator(cache, mockSearch, mockLlm, verifier);
+      const result = await estimator.estimateCeremonyPackagePrice(
+        {
+          upacaraId: 17,
+          upacaraNama: 'Melaspas Bangunan',
+          tingkatanId: 2,
+          tingkatanNama: 'Madya',
+        },
+        { tanggalWita: '2026-11-05' }
+      );
+
+      expect(result.status).toBe('ditemukan');
+      expect(result.hargaMin).toBe(2500000);
+      expect(result.hargaMax).toBe(4000000);
+      expect(result.urlSumber).toBe('https://babadbali.com/paket-melaspas');
+      expect(result.catatan).toBe('Paket banten madya lengkap');
+
+      // Verify cached with package key
+      const cached = await cache.get('paket:17:madya', '2026-11-05');
+      expect(cached).not.toBeNull();
+      expect(cached?.hargaMin).toBe(2500000);
+    });
+
+    it('menerima hasil sintesis estimasi harga paket upacara dari LLM dan penelusuran web', async () => {
+      const cache = new InMemoryPriceCache();
+      const sourceContent = 'Paket upacara otonan tersedia lengkap.';
+      const mockSearch = new MockSearchClient([
+        {
+          url: 'https://babadbali.com/otonan',
+          title: 'Otonan',
+          content: sourceContent,
+        },
+      ]);
+
+      const mockLlm = new MockLlmClient({
+        mockJson: {
+          hargaMin: 1500000,
+          hargaMax: 2000000,
+          kutipan: 'Paket upacara otonan tersedia lengkap.',
+        },
+      });
+
+      const estimator = new PriceEstimator(cache, mockSearch, mockLlm, verifier);
+      const result = await estimator.estimateCeremonyPackagePrice(
+        {
+          upacaraId: 23,
+          upacaraNama: 'Otonan',
+          tingkatanNama: 'Alit',
+        },
+        { tanggalWita: '2026-11-05' }
+      );
+
+      expect(result.status).toBe('ditemukan');
+      expect(result.hargaMin).toBe(1500000);
+      expect(result.hargaMax).toBe(2000000);
+    });
+
+    it('mendukung ekstraksi angka harga dalam bentuk teks juta dan ribu dari kutipan', async () => {
+      const cache = new InMemoryPriceCache();
+      const sourceContent =
+        'Biaya paket banten pawiwahan madya berkisar 3,5 juta sampai 6 juta rupiah di Denpasar.';
+      const mockSearch = new MockSearchClient([
+        {
+          url: 'https://babadbali.com/pawiwahan-madya',
+          title: 'Pawiwahan Madya',
+          content: sourceContent,
+        },
+      ]);
+
+      const mockLlm = new MockLlmClient({
+        mockJson: {
+          hargaMin: 3500000,
+          hargaMax: 6000000,
+          kutipan: 'Biaya paket banten pawiwahan madya berkisar 3,5 juta sampai 6 juta rupiah di Denpasar.',
+          urlSumber: 'https://babadbali.com/pawiwahan-madya',
+        },
+      });
+
+      const estimator = new PriceEstimator(cache, mockSearch, mockLlm, verifier);
+      const result = await estimator.estimateCeremonyPackagePrice(
+        {
+          upacaraId: 9,
+          upacaraNama: 'Pawiwahan',
+          tingkatanNama: 'Madya',
+        },
+        { tanggalWita: '2026-11-05' }
+      );
+
+      expect(result.status).toBe('ditemukan');
+      expect(result.hargaMin).toBe(3500000);
+      expect(result.hargaMax).toBe(6000000);
+      expect(result.urlSumber).toBe('https://babadbali.com/pawiwahan-madya');
     });
   });
 });

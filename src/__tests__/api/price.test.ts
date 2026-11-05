@@ -38,5 +38,22 @@ describe('Price API Route (Fase 4)', () => {
     expect(data.total).toBeDefined();
     expect(data.total.disclaimer).toContain('Harga merupakan estimasi');
   });
+
+  it('handles package ceremony price request directly', async () => {
+    const req = createJsonRequest({
+      upacaraId: 17,
+      upacaraNama: 'Melaspas Bangunan',
+      tingkatanNama: 'Madya',
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data.packagePrice).toBeDefined();
+    expect(data.packagePrice.upacaraNama).toBe('Melaspas Bangunan');
+    expect(data.packagePrice.tingkatanNama).toBe('Madya');
+    expect(data.waktuPengambilanWita).toBeDefined();
+  });
 });
 

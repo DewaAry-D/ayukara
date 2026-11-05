@@ -20,6 +20,7 @@ describe('Database DDL & Seeder Integrity Test (PGlite)', () => {
     const seedHariRayaSql = fs.readFileSync(path.resolve('docs/seed_hari_raya.sql'), 'utf-8');
     const seedBantenV2Sql = fs.readFileSync(path.resolve('docs/seed_banten_v2.sql'), 'utf-8');
     const seedHariRayaV2Sql = fs.readFileSync(path.resolve('docs/seed_hari_raya_v2.sql'), 'utf-8');
+    const seedUpdateDeskripsiSql = fs.readFileSync(path.resolve('docs/update_deskripsi_upacara.sql'), 'utf-8');
 
     // Should not contain CREATE TABLE, DROP TABLE, ALTER TABLE
     const ddlPattern = /\b(CREATE\s+TABLE|DROP\s+TABLE|ALTER\s+TABLE)\b/i;
@@ -28,6 +29,7 @@ describe('Database DDL & Seeder Integrity Test (PGlite)', () => {
     expect(seedHariRayaSql).not.toMatch(ddlPattern);
     expect(seedBantenV2Sql).not.toMatch(ddlPattern);
     expect(seedHariRayaV2Sql).not.toMatch(ddlPattern);
+    expect(seedUpdateDeskripsiSql).not.toMatch(ddlPattern);
   });
 
   it('runs initial DDL migration successfully on clean database', async () => {
@@ -226,6 +228,30 @@ describe('Database DDL & Seeder Integrity Test (PGlite)', () => {
 
     const countHariRayaAturan = await db.query<{ count: string }>('SELECT COUNT(*) FROM hari_raya_aturan;');
     expect(Number(countHariRayaAturan.rows[0].count)).toBe(35); // 20 + 15
+  });
+
+  it('runs 06-update-deskripsi-upacara successfully', async () => {
+    const seederUpdate = require('../db/seeders/06-update-deskripsi-upacara.js');
+    const queryInterface = {
+      sequelize: {
+        query: async (sql: string) => {
+          return db.exec(sql);
+        },
+      },
+    };
+
+    await seederUpdate.up(queryInterface);
+
+    // Verify deskripsi is updated for e.g. upacara 13, 17, 23
+    const res13 = await db.query<{ deskripsi: string }>(
+      'SELECT deskripsi FROM upacara WHERE id = 13;'
+    );
+    expect(res13.rows[0].deskripsi).toContain('Atiwa-tiwa');
+
+    const res23 = await db.query<{ deskripsi: string }>(
+      'SELECT deskripsi FROM upacara WHERE id = 23;'
+    );
+    expect(res23.rows[0].deskripsi).toContain('otonan');
   });
 
   it('enforces schema constraints (CHECK and FOREIGN KEY)', async () => {

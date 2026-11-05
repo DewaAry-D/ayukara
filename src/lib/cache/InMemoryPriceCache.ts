@@ -8,12 +8,12 @@ interface CacheItem {
 export class InMemoryPriceCache implements PriceCache {
   private store = new Map<string, CacheItem>();
 
-  private makeKey(bantenId: number, tanggalWita: string): string {
-    return `harga:${bantenId}:${tanggalWita}`;
+  private makeKey(id: number | string, tanggalWita: string): string {
+    return `harga:${id}:${tanggalWita}`;
   }
 
-  public async get(bantenId: number, tanggalWita: string): Promise<PriceEntry | null> {
-    const key = this.makeKey(bantenId, tanggalWita);
+  public async get(id: number | string, tanggalWita: string): Promise<PriceEntry | null> {
+    const key = this.makeKey(id, tanggalWita);
     const item = this.store.get(key);
     if (!item) return null;
 
@@ -26,12 +26,12 @@ export class InMemoryPriceCache implements PriceCache {
   }
 
   public async set(
-    bantenId: number,
+    id: number | string,
     tanggalWita: string,
     value: PriceEntry,
     expireAt: Date
   ): Promise<void> {
-    const key = this.makeKey(bantenId, tanggalWita);
+    const key = this.makeKey(id, tanggalWita);
     this.store.set(key, {
       value,
       expireAt: expireAt.getTime(),

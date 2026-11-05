@@ -199,9 +199,189 @@ describe('WarigaRuleEngine (Fase 2)', () => {
 
     expect(evaluations.length).toBe(3);
     const filtered = engine.filterRecommended(range, { upacaraId: 1 });
-    // Filtered dates exclude 'dilarang'
+    // Filtered dates exclude 'dilarang' and only include 'dianjurkan'
     for (const item of filtered) {
-      expect(item.status).not.toBe('dilarang');
+      expect(item.status).toBe('dianjurkan');
     }
+  });
+
+  describe('Alur Keputusan Rekomendasi Dewasa Ayu (Flowchart Resmi)', () => {
+    it('membuang tanggal jika terdapat dewasa ala yang dilarang (misal Salah Wadi untuk Menek Kelih)', () => {
+      const dateInfo = calendarAdapter.fromDate(new Date('2024-02-28'));
+
+      const ruleSet: WarigaRuleSet = {
+        dewasaList: [
+          {
+            id: 193,
+            nama: 'Salah Wadi',
+            sifat: 'ala',
+            deskripsi:
+              'Tidak baik untuk melakukan Manusa Yadnya (wiwaha, mapendes, potong rambut dll.) Pitra Yadnya',
+            syarat: [{ grup: 1, wuku_id: dateInfo.wuku.id }],
+          },
+          {
+            id: 200,
+            nama: 'Dewasa Ayu Lain',
+            sifat: 'ayu',
+            deskripsi: 'Baik untuk panca yadnya',
+            syarat: [{ grup: 1, wuku_id: dateInfo.wuku.id }],
+          },
+        ],
+        aturanList: [
+          {
+            id: 33,
+            dewasa_id: 193,
+            kategori_yadnya_id: 3,
+            efek: 'larangan',
+            level: RuleHierarchyLevel.WEWARAN,
+            status: 'unverified',
+          },
+        ],
+      };
+
+      const engine = new WarigaRuleEngine(ruleSet);
+      // Evaluasi Menek Kelih (upacara 24, Manusa Yadnya kategori 3)
+      const res = engine.evaluate(dateInfo, {
+        upacaraId: 24,
+        upacaraNama: 'Menek Kelih',
+        kategoriYadnyaId: 3,
+      });
+
+      // Harus dilarang dan dibuang!
+      expect(res.status).toBe('dilarang');
+      expect(res.rekomendasi).toBe('tidak_disarankan');
+      expect(res.alasan).toEqual([]);
+
+      const filtered = engine.filterRecommended([dateInfo], {
+        upacaraId: 24,
+        upacaraNama: 'Menek Kelih',
+        kategoriYadnyaId: 3,
+      });
+      expect(filtered.length).toBe(0);
+    });
+
+    it('membuang tanggal pernikahan jika terdapat Carik Walangati', () => {
+      const dateInfo = calendarAdapter.fromDate(new Date('2024-02-28'));
+
+      const ruleSet: WarigaRuleSet = {
+        dewasaList: [
+          {
+            id: 35,
+            nama: 'Carik Walangati',
+            sifat: 'ala',
+            deskripsi:
+              'Tidak baik untuk melakukan pernikahan/wiwaha, atiwa-tiwa/ngaben dan membangun rumah.',
+            syarat: [{ grup: 1, wuku_id: dateInfo.wuku.id }],
+          },
+        ],
+        aturanList: [],
+      };
+
+      const engine = new WarigaRuleEngine(ruleSet);
+      const res = engine.evaluate(dateInfo, {
+        upacaraId: 17,
+        upacaraNama: 'Pawiwahan',
+        kategoriYadnyaId: 3,
+      });
+
+      expect(res.status).toBe('dilarang');
+      expect(res.rekomendasi).toBe('tidak_disarankan');
+    });
+
+    it('menandai status netral dan tidak merekomendasikan tanggal jika tidak ada anjuran', () => {
+      const dateInfo = calendarAdapter.fromDate(new Date('2024-02-28'));
+
+      const ruleSet: WarigaRuleSet = {
+        dewasaList: [
+          {
+            id: 99,
+            nama: 'Kala Katemu',
+            sifat: 'ayu',
+            deskripsi: 'Baik untuk menangkap ikan, berburu, mapikat, memasang jerat.',
+            syarat: [{ grup: 1, wuku_id: dateInfo.wuku.id }],
+          },
+        ],
+        aturanList: [],
+      };
+
+      const engine = new WarigaRuleEngine(ruleSet);
+      const res = engine.evaluate(dateInfo, {
+        upacaraId: 24,
+        upacaraNama: 'Menek Kelih',
+        kategoriYadnyaId: 3,
+      });
+
+      // Tanggal netral, tidak boleh direkomendasikan untuk Menek Kelih
+      expect(res.status).toBe('netral');
+      expect(res.rekomendasi).toBe('tidak_disarankan');
+      expect(res.alasan).toEqual([]);
+
+      const filtered = engine.filterRecommended([dateInfo], {
+        upacaraId: 24,
+        upacaraNama: 'Menek Kelih',
+        kategoriYadnyaId: 3,
+      });
+      expect(filtered.length).toBe(0);
+    });
+
+    it('merekomendasikan tanggal dan hanya memuat alasan dewasa ayu yang relevan serta kutipan', () => {
+      const dateInfo = calendarAdapter.fromDate(new Date('2024-02-28'));
+
+      const ruleSet: WarigaRuleSet = {
+        dewasaList: [
+          {
+            id: 10,
+            nama: 'Amerta Yoga',
+            sifat: 'ayu',
+            deskripsi: 'Baik untuk melakukan segala upacara (panca yadnya)',
+            syarat: [{ grup: 1, wuku_id: dateInfo.wuku.id }],
+          },
+          {
+            id: 99,
+            nama: 'Kala Katemu',
+            sifat: 'ayu',
+            deskripsi: 'Baik untuk menangkap ikan, berburu, mapikat, memasang jerat.',
+            syarat: [{ grup: 1, wuku_id: dateInfo.wuku.id }],
+          },
+        ],
+        aturanList: [
+          {
+            id: 1,
+            dewasa_id: 10,
+            upacara_id: null,
+            kategori_yadnya_id: null,
+            efek: 'anjuran',
+            level: RuleHierarchyLevel.WUKU,
+            kutipan: {
+              teks: 'Amerta Yoga - Baik untuk melangsungkan panca yadnya',
+              sumberJudul: 'Lontar Wariga Dewasa',
+            },
+          },
+        ],
+      };
+
+      const engine = new WarigaRuleEngine(ruleSet);
+      const res = engine.evaluate(dateInfo, {
+        upacaraId: 24,
+        upacaraNama: 'Menek Kelih',
+        kategoriYadnyaId: 3,
+      });
+
+      expect(res.status).toBe('dianjurkan');
+      expect(res.rekomendasi).toBe('paling_disarankan');
+      // Alasan HANYA memuat Amerta Yoga, TIDAK memuat Kala Katemu (menangkap ikan)
+      expect(res.alasan.some((a) => a.includes('Amerta Yoga'))).toBe(true);
+      expect(res.alasan.some((a) => a.includes('Kala Katemu'))).toBe(false);
+      // Kutipan tersedia
+      expect(res.aturanKutipan && res.aturanKutipan.length > 0).toBe(true);
+      expect(res.aturanKutipan?.[0].teks).toContain('Amerta Yoga');
+
+      const filtered = engine.filterRecommended([dateInfo], {
+        upacaraId: 24,
+        upacaraNama: 'Menek Kelih',
+        kategoriYadnyaId: 3,
+      });
+      expect(filtered.length).toBe(1);
+    });
   });
 });

@@ -8,28 +8,65 @@ export interface OpenAiClientOptions {
   model?: string;
 }
 
+export function cleanEnv(val?: string | null): string | undefined {
+  if (!val) return undefined;
+  let s = val.trim();
+  s = s.replace(/[\r\n]/g, '').trim();
+  if (
+    (s.startsWith('"') && s.endsWith('"') && s.length >= 2) ||
+    (s.startsWith("'") && s.endsWith("'") && s.length >= 2)
+  ) {
+    s = s.slice(1, -1).trim();
+  }
+  return s.length > 0 ? s : undefined;
+}
+
 export class OpenAiLlmClient implements LlmClient {
   private client: OpenAI;
   private model: string;
+  private apiKey: string;
+  private baseURL?: string;
 
   constructor(options?: OpenAiClientOptions) {
-    const apiKey =
+    const rawApiKey =
       options?.apiKey ||
       process.env.LLM_API_KEY ||
-      process.env.OPENAI_API_KEY ||
-      'dummy-key-for-test';
+      process.env.OPENAI_API_KEY;
+
+    this.apiKey = cleanEnv(rawApiKey) || 'dummy-key-for-test';
 
     // Mendukung baseURL kustom (misal: 9router / proxy gateway OpenAI-compatible)
-    const baseURL = options?.baseURL || process.env.LLM_BASE_URL || undefined;
-    this.model = options?.model || process.env.LLM_MODEL || 'gpt-4o-mini';
+    const rawBaseURL =
+      options?.baseURL ||
+      process.env.LLM_BASE_URL ||
+      process.env.OPENAI_BASE_URL ||
+      process.env.OPENAI_API_BASE;
+
+    let baseURL = cleanEnv(rawBaseURL);
+    if (baseURL) {
+      baseURL = baseURL.replace(/\/+$/, '');
+    }
+    this.baseURL = baseURL;
+
+    const rawModel = options?.model || process.env.LLM_MODEL;
+    this.model = cleanEnv(rawModel) || 'gpt-4o-mini';
 
     this.client = new OpenAI({
-      apiKey,
-      baseURL,
+      apiKey: this.apiKey,
+      baseURL: this.baseURL || undefined,
     });
   }
 
   public async complete(args: LlmCompletionArgs): Promise<LlmCompletionResult> {
+    const targetEndpoint = this.baseURL || 'https://api.openai.com/v1';
+    const maskedKey =
+      this.apiKey && this.apiKey !== 'dummy-key-for-test'
+        ? `${this.apiKey.substring(0, 7)}...`
+        : 'TIDAK TERPASANG';
+    console.log(
+      `[Ayukara LLM] Mengirim permintaan ke ${targetEndpoint} (model: ${this.model}, key: ${maskedKey})`
+    );
+
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
 
     if (args.system) {
@@ -38,6 +75,19 @@ export class OpenAiLlmClient implements LlmClient {
 
     for (const msg of args.messages) {
       messages.push({ role: msg.role, content: msg.content });
+    }
+
+    // Pastikan kata 'json' terdapat pada pesan jika response_format json_object diminta (aturan wajib OpenAI API)
+    if (args.jsonSchema) {
+      const hasJsonKeyword = messages.some(
+        (m) => typeof m.content === 'string' && /json/i.test(m.content)
+      );
+      if (!hasJsonKeyword) {
+        messages.push({
+          role: 'system',
+          content: 'Respons harus berformat JSON valid sesuai spesifikasi skema.',
+        });
+      }
     }
 
     const payload: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
@@ -50,15 +100,48 @@ export class OpenAiLlmClient implements LlmClient {
       payload.response_format = { type: 'json_object' };
     }
 
-    const response = await this.client.chat.completions.create(payload);
-    const content = response.choices[0]?.message?.content || '';
+    let content = '';
+    try {
+      const response = await this.client.chat.completions.create(payload);
+      content = response.choices[0]?.message?.content || '';
+    } catch (createErr) {
+      // Jika model proxy atau endpoint kustom tidak mendukung response_format json_object:
+      if (args.jsonSchema && payload.response_format) {
+        try {
+          const fallbackPayload = { ...payload };
+          delete fallbackPayload.response_format;
+          const retryResp = await this.client.chat.completions.create(fallbackPayload);
+          content = retryResp.choices[0]?.message?.content || '';
+        } catch {
+          throw createErr;
+        }
+      } else {
+        throw createErr;
+      }
+    }
+
+    // Jika respons teks dari proxy/gateway sebenarnya adalah pesan error otentikasi upstream (misal 9Router)
+    if (
+      content.trim().startsWith('⚠️') ||
+      /invalid api key\. please check that your api key is correct/i.test(content)
+    ) {
+      throw new Error(content.trim());
+    }
 
     let json: unknown = undefined;
     if (args.jsonSchema && content) {
       try {
         json = JSON.parse(content);
       } catch {
-        json = undefined;
+        // Fallback ekstraksi JSON blok ```json ... ``` atau objek pertama { ... }
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            json = JSON.parse(jsonMatch[0]);
+          } catch {
+            json = undefined;
+          }
+        }
       }
     }
 
@@ -96,7 +179,7 @@ export class OpenAiLlmClient implements LlmClient {
 }
 
 export function createLlmClient(provider?: string, options?: OpenAiClientOptions): LlmClient {
-  const p = (provider || process.env.LLM_PROVIDER || 'openai').toLowerCase();
+  const p = cleanEnv(provider || process.env.LLM_PROVIDER || 'openai')?.toLowerCase() || 'openai';
   if (p === 'mock') {
     return new MockLlmClient();
   }

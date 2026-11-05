@@ -67,7 +67,11 @@ export async function matchUpacaraAction(query: string): Promise<MatchUpacaraAct
     const llm = createLlmClient();
     const matcher = new UpacaraMatcher(repo, llm);
 
+    console.log(`[Ayukara matchUpacaraAction] Memproses pencarian upacara untuk input: "${trimmed}"`);
     const result = await matcher.match(trimmed);
+    console.log(
+      `[Ayukara matchUpacaraAction] Hasil pencocokan: tipe "${result.matchType}", terpilih: ${result.selectedUpacara?.nama || 'tidak ada'}`
+    );
 
     return {
       success: true,

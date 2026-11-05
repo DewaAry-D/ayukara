@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getHariRayaListAction, resolveHariRayaAction } from '../actions';
 import { UpacaraMatchItem } from '@/lib/upacara/UpacaraMatcher';
 import { ResolveHariRayaActionResult } from '../types';
+import { LoadingModal } from './LoadingModal';
 
 const ITEMS_PER_PAGE = 8;
 const AVAILABLE_YEARS = [2026, 2027, 2028];
@@ -15,6 +16,7 @@ export function TabHariRaya() {
   // Master list of Hari Raya Upacara
   const [hariRayaList, setHariRayaList] = useState<UpacaraMatchItem[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -140,6 +142,7 @@ export function TabHariRaya() {
       tingkatanId: '2',
     });
 
+    setIsNavigating(true);
     router.push(`/planner/result?${params.toString()}`);
   }
 
@@ -257,7 +260,7 @@ export function TabHariRaya() {
         </div>
 
         {/* Tahun Chips */}
-        <div className="flex items-center gap-2 pt-2 border-t border-white/10 text-xs">
+        <div className="flex items-center gap-2 pt-2 text-xs">
           <span className="text-stone-400 mr-1">Tahun Kalender:</span>
           {AVAILABLE_YEARS.map((yr) => (
             <button
@@ -279,7 +282,7 @@ export function TabHariRaya() {
         {selectedUpacara && (
           <div className="rounded-xl bg-black/25 border border-white/10 p-5 sm:p-6 space-y-4">
             {/* Header info */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
               <div className="flex items-center gap-2 text-sm font-bold font-serif text-white">
                 <svg className="w-4 h-4 text-[#C9A24A] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -435,32 +438,26 @@ export function TabHariRaya() {
             </div>
 
             {/* PENJELASAN ATURAN PENENTUAN & MAKNA BUDAYA */}
-            <div className="space-y-3 pt-3 border-t border-white/10 text-xs">
-              <div className="flex items-start gap-2.5">
-                <span className="w-1.5 h-4 bg-[#C9A24A] rounded-full mt-0.5 shrink-0" />
-                <div className="space-y-1">
-                  <h5 className="font-bold text-white uppercase tracking-wider text-[11px]">
-                    Penjelasan Penentuan Kalender
-                  </h5>
-                  <p className="text-stone-300 leading-relaxed">
-                    {resolvedResult?.penjelasanDetail ||
-                      resolvedResult?.penjelasanPenentuan ||
-                      'Aturan penentuan belum tersedia'}
-                  </p>
-                </div>
+            <div className="space-y-3 pt-2 text-xs">
+              <div className="space-y-1">
+                <h5 className="font-bold text-white uppercase tracking-wider text-[11px]">
+                  Penjelasan Penentuan Kalender
+                </h5>
+                <p className="text-stone-300 leading-relaxed">
+                  {resolvedResult?.penjelasanDetail ||
+                    resolvedResult?.penjelasanPenentuan ||
+                    'Aturan penentuan belum tersedia'}
+                </p>
               </div>
 
               {selectedUpacara.deskripsi && (
-                <div className="flex items-start gap-2.5 pt-1">
-                  <span className="w-1.5 h-4 bg-[#A8543A] rounded-full mt-0.5 shrink-0" />
-                  <div className="space-y-1">
-                    <h5 className="font-bold text-white uppercase tracking-wider text-[11px]">
-                      Makna & Hakikat Upacara
-                    </h5>
-                    <p className="text-stone-300 leading-relaxed">
-                      {selectedUpacara.deskripsi}
-                    </p>
-                  </div>
+                <div className="space-y-1 pt-1">
+                  <h5 className="font-bold text-white uppercase tracking-wider text-[11px]">
+                    Makna & Hakikat Upacara
+                  </h5>
+                  <p className="text-stone-300 leading-relaxed">
+                    {selectedUpacara.deskripsi}
+                  </p>
                 </div>
               )}
 
@@ -491,6 +488,14 @@ export function TabHariRaya() {
           Lihat Kebutuhan Banten →
         </button>
       </div>
+
+      {/* Loading Modal saat navigasi ke Result */}
+      <LoadingModal
+        isOpen={isNavigating}
+        onCancel={() => setIsNavigating(false)}
+        title="Menyiapkan kebutuhan banten..."
+        subtitle="Ayukara sedang memproses rencana Anda."
+      />
     </div>
   );
 }

@@ -6,9 +6,9 @@ export default function HomePage() {
   return (
     <div className="w-full flex flex-col bg-[#1F3B3A]">
       {/* HERO SECTION (Top cream + landscape waves) */}
-      <section className="relative w-full bg-[#F5F0E6] overflow-hidden pt-8 pb-20 sm:pb-32 lg:pb-40">
+      <section className="relative w-full bg-[#F5F0E6] overflow-x-clip pt-8 pb-20 sm:pb-32 lg:pb-40">
         {/* Layered hill wave background decorations */}
-        <div className="absolute inset-x-0 bottom-0 pointer-events-none w-full h-[55%] flex flex-col justify-end">
+        <div className="absolute inset-x-0 -bottom-[2px] pointer-events-none w-full h-[55%] flex flex-col justify-end">
           <div className="w-full h-full relative">
             <svg
               className="absolute bottom-0 w-full h-[85%] text-[#8EA89D]/40"
@@ -27,13 +27,15 @@ export default function HomePage() {
               <path d="M0,128 C280,224 560,96 840,192 C1120,288 1320,160 1440,192 L1440,320 L0,320 Z" />
             </svg>
             <svg
-              className="absolute bottom-0 w-full h-[40%] text-[#1F3B3A]"
+              className="absolute -bottom-[2px] w-full h-[calc(40%+4px)] text-[#1F3B3A]"
               viewBox="0 0 1440 320"
               preserveAspectRatio="none"
               fill="currentColor"
             >
-              <path d="M0,160 C360,64 720,224 1080,128 C1260,80 1380,140 1440,160 L1440,320 L0,320 Z" />
+              <path d="M0,160 C360,64 720,224 1080,128 C1260,80 1380,140 1440,160 L1440,325 L0,325 Z" />
             </svg>
+            {/* Strip penutup agar tidak ada celah garis putih/subpixel dari background beige */}
+            <div className="absolute inset-x-0 -bottom-[2px] h-2 bg-[#1F3B3A]" />
           </div>
         </div>
 
@@ -80,7 +82,7 @@ export default function HomePage() {
       </section>
 
       {/* CARA KERJA SECTION (Deep Forest Green #1F3B3A) */}
-      <section className="relative w-full bg-[#1F3B3A] py-16 sm:py-24 px-6 sm:px-12 lg:px-20 border-t border-white/10">
+      <section className="relative w-full bg-[#1F3B3A] py-16 sm:py-24 px-6 sm:px-12 lg:px-20">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1 */}

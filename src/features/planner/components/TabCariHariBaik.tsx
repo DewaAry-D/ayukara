@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { matchUpacaraAction } from '../actions';
 import { CandidateResult, UpacaraMatchItem } from '@/lib/upacara/UpacaraMatcher';
 import { TingkatanCards } from './TingkatanCards';
+import { LoadingModal } from './LoadingModal';
 
 export function TabCariHariBaik() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export function TabCariHariBaik() {
   // Inputs
   const [inputText, setInputText] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   // Selected Upacara & Candidates
@@ -108,6 +110,7 @@ export function TabCariHariBaik() {
       toDate,
     });
 
+    setIsNavigating(true);
     router.push(`/planner/result?${params.toString()}`);
   }
 
@@ -248,7 +251,7 @@ export function TabCariHariBaik() {
         )}
 
         {/* Rentang Tanggal: Dari - Sampai */}
-        <div className="pt-2 border-t border-white/10 space-y-4">
+        <div className="pt-2 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="dari-tanggal" className="block text-xs font-semibold text-[#F3E9CF] mb-1 cursor-pointer">
@@ -265,7 +268,7 @@ export function TabCariHariBaik() {
                   } catch {}
                 }}
                 style={{ colorScheme: 'dark' }}
-                className="w-full bg-transparent border-b border-white/30 pb-2 text-sm text-white focus:border-[#C9A24A] focus:outline-hidden cursor-pointer"
+                className="w-full rounded-xl bg-white/[0.06] border border-white/20 p-3 text-sm text-white focus:border-[#C9A24A] focus:outline-hidden cursor-pointer"
               />
             </div>
             <div>
@@ -283,7 +286,7 @@ export function TabCariHariBaik() {
                   } catch {}
                 }}
                 style={{ colorScheme: 'dark' }}
-                className="w-full bg-transparent border-b border-white/30 pb-2 text-sm text-white focus:border-[#C9A24A] focus:outline-hidden cursor-pointer"
+                className="w-full rounded-xl bg-white/[0.06] border border-white/20 p-3 text-sm text-white focus:border-[#C9A24A] focus:outline-hidden cursor-pointer"
               />
             </div>
           </div>
@@ -361,6 +364,14 @@ export function TabCariHariBaik() {
           Lihat Rekomendasi →
         </button>
       </div>
+
+      {/* Loading Modal saat navigasi ke Result */}
+      <LoadingModal
+        isOpen={isNavigating}
+        onCancel={() => setIsNavigating(false)}
+        title="Menyiapkan rekomendasi..."
+        subtitle="Ayukara sedang memproses rencana Anda."
+      />
     </div>
   );
 }

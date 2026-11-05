@@ -11,9 +11,9 @@ export default function PlannerPage() {
   return (
     <div className="w-full min-h-screen bg-[#1F3B3A]">
       {/* TOP HEADER SECTION (#F5F0E6 with wave landscape) */}
-      <section className="relative w-full bg-[#F5F0E6] pt-10 pb-16 sm:pb-24 overflow-hidden border-b border-[#DDD3C1]/50">
+      <section className="relative w-full bg-[#F5F0E6] pt-10 pb-16 sm:pb-24 overflow-x-clip">
         {/* Layered hill wave background decorations */}
-        <div className="absolute inset-x-0 bottom-0 pointer-events-none w-full h-[50%] flex flex-col justify-end">
+        <div className="absolute inset-x-0 -bottom-[2px] pointer-events-none w-full h-[50%] flex flex-col justify-end">
           <div className="w-full h-full relative">
             <svg
               className="absolute bottom-0 w-full h-[85%] text-[#8EA89D]/40"
@@ -32,13 +32,15 @@ export default function PlannerPage() {
               <path d="M0,96 C280,168 560,72 840,144 C1120,216 1320,120 1440,144 L1440,240 L0,240 Z" />
             </svg>
             <svg
-              className="absolute bottom-0 w-full h-[35%] text-[#1F3B3A]"
+              className="absolute -bottom-[2px] w-full h-[calc(35%+4px)] text-[#1F3B3A]"
               viewBox="0 0 1440 240"
               preserveAspectRatio="none"
               fill="currentColor"
             >
-              <path d="M0,120 C360,48 720,168 1080,96 C1260,60 1380,105 1440,120 L1440,240 L0,240 Z" />
+              <path d="M0,120 C360,48 720,168 1080,96 C1260,60 1380,105 1440,120 L1440,245 L0,245 Z" />
             </svg>
+            {/* Strip penutup agar tidak ada celah garis putih/subpixel dari background beige */}
+            <div className="absolute inset-x-0 -bottom-[2px] h-2 bg-[#1F3B3A]" />
           </div>
         </div>
 

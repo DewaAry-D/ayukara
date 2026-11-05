@@ -1,17 +1,19 @@
 export interface PriceEntry {
-  bantenId: number;
+  bantenId?: number;
+  packageKey?: string;
   hargaMin: number | null;
   hargaMax: number | null;
   mataUang: 'IDR';
   urlSumber?: string | null;
   kutipan?: string | null;
+  catatan?: string | null;
   fetchedAt: string; // ISO string
   status: 'ditemukan' | 'tidak_ditemukan';
 }
 
 export interface PriceCache {
-  get(bantenId: number, tanggalWita: string): Promise<PriceEntry | null>;
-  set(bantenId: number, tanggalWita: string, value: PriceEntry, expireAt: Date): Promise<void>;
+  get(id: number | string, tanggalWita: string): Promise<PriceEntry | null>;
+  set(id: number | string, tanggalWita: string, value: PriceEntry, expireAt: Date): Promise<void>;
 }
 
 /**

@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Default: tab 'dewasa' (Cari Hari Baik)
-    const { fromDate, toDate, upacaraId, tingkatanId } = body;
+    const { fromDate, toDate, upacaraId, tingkatanId, upacaraNama, kategoriYadnyaId } = body;
     if (!fromDate || !toDate) {
       return NextResponse.json(
         { error: 'fromDate dan toDate wajib diisi untuk tab dewasa' },
@@ -93,9 +93,25 @@ export async function POST(request: NextRequest) {
     }
 
     const range = calendarAdapter.fromRange(new Date(fromDate), new Date(toDate));
-    const emptyRuleSet: WarigaRuleSet = { dewasaList: [], aturanList: [] };
-    const engine = new WarigaRuleEngine(emptyRuleSet);
-    const recommendations = engine.filterRecommended(range, { upacaraId: upacaraId ? Number(upacaraId) : undefined });
+    let warigaRuleSet: WarigaRuleSet = body.ruleSet || { dewasaList: [], aturanList: [] };
+    if (!body.ruleSet) {
+      try {
+        const { getSequelize } = await import('@/lib/db');
+        const { RuleRepository } = await import('@/lib/db/repositories/RuleRepository');
+        const seq = getSequelize();
+        const ruleRepo = new RuleRepository({ sequelize: seq });
+        warigaRuleSet = await ruleRepo.getWarigaRuleSet();
+      } catch {
+        // Fallback ke emptyRuleSet bila DB belum terhubung
+      }
+    }
+
+    const engine = new WarigaRuleEngine(warigaRuleSet);
+    const recommendations = engine.filterRecommended(range, {
+      upacaraId: upacaraId ? Number(upacaraId) : undefined,
+      upacaraNama,
+      kategoriYadnyaId: kategoriYadnyaId ? Number(kategoriYadnyaId) : undefined,
+    });
 
     const banten = await resolveBanten(
       Number(upacaraId || 1),

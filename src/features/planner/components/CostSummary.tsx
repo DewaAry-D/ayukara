@@ -37,7 +37,7 @@ export function CostSummary({ totalPrice, waktuPengambilanWita }: CostSummaryPro
 
   return (
     <div className="rounded-2xl border border-[#E5DFD5] bg-white p-6 shadow-xs space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-[#C25E2E]">
             Perkiraan Anggaran

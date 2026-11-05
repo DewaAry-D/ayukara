@@ -14,14 +14,23 @@ describe('UpacaraMatcher', () => {
     { id: 12, nama: 'Melaspas Bangunan', alias: ['Melaspas'], jenis_penentuan: 'dewasa' },
     { id: 13, nama: 'Ngeringkes / Atiwa-tiwa', alias: ['Ngaben', 'Pelebon'], jenis_penentuan: 'dewasa' },
     { id: 14, nama: 'Ngelungah', alias: ['Ngelungah'], jenis_penentuan: 'dewasa' },
+    { id: 15, nama: 'Keruron', alias: ['Keruron'], jenis_penentuan: 'dewasa' },
     { id: 16, nama: 'Pembersihan Rumah Duka', alias: ['Pembersihan Rumah Duka'], jenis_penentuan: 'dewasa' },
     { id: 17, nama: 'Pawidhi Widana', alias: ['Pawiwahan', 'Pernikahan', 'Nikah'], jenis_penentuan: 'dewasa' },
+    { id: 18, nama: 'Megedong-gedongan', alias: ['Megedong-gedongan'], jenis_penentuan: 'dewasa' },
+    { id: 19, nama: 'Bayi Lahir (Mapag Rare)', alias: ['Mapag Rare'], jenis_penentuan: 'dewasa' },
+    { id: 20, nama: 'Kepus Pusar', alias: ['Kepus Pusar'], jenis_penentuan: 'dewasa' },
     { id: 21, nama: 'Bayi Umur 42 Hari', alias: ['Tutug Kambuhan', '42 Hari'], jenis_penentuan: 'dewasa' },
     { id: 22, nama: 'Bayi Umur Tiga Bulan (Nyambutin)', alias: ['Nyambutin', '3 Bulan', 'Tiga Bulan'], jenis_penentuan: 'dewasa' },
     { id: 23, nama: 'Otonan (Bayi Umur 6 Bulan)', alias: ['Otonan', '6 Bulan'], jenis_penentuan: 'otonan' },
     { id: 24, nama: 'Menek Kelih/Bajang', alias: ['Menek Kelih', 'Menek Bajang'], jenis_penentuan: 'dewasa' },
     { id: 25, nama: 'Potong Gigi (Metatah/Mapandes)', alias: ['Potong Gigi', 'Metatah', 'Mapandes'], jenis_penentuan: 'dewasa' },
     { id: 26, nama: 'Mawinten (Pawintenan)', alias: ['Mawinten'], jenis_penentuan: 'dewasa' },
+    { id: 27, nama: 'Caru Eka Sata', alias: ['Caru Eka Sata'], jenis_penentuan: 'dewasa' },
+    { id: 28, nama: 'Caru Panca Sata', alias: ['Caru Panca Sata'], jenis_penentuan: 'dewasa' },
+    { id: 29, nama: 'Tumpek Landep', alias: ['Tumpek Landep'], jenis_penentuan: 'hari_raya_tetap' },
+    { id: 30, nama: 'Tumpek Wariga / Tumpek Uduh / Tumpek Pengatag / Tumpek Bubuh', alias: ['Tumpek Wariga'], jenis_penentuan: 'hari_raya_tetap' },
+    { id: 34, nama: 'Rambut Sedana', alias: ['Rambut Sedana'], jenis_penentuan: 'hari_raya_tetap' },
   ];
 
   const mockRepo: IUpacaraMatchRepository = {
@@ -240,5 +249,124 @@ describe('UpacaraMatcher', () => {
 
     expect(result.matchType).toBe('not_found');
     expect(mockLlm.lastArgs?.messages[0].content).toContain(injection);
+  });
+
+  it('recommends Melaspas Bangunan and Caru for new building / office opening description', async () => {
+    const failingLlm: LlmClient = {
+      async complete() {
+        throw new Error('LLM offline');
+      },
+      async *stream() {
+        yield '';
+      },
+    };
+
+    const matcher = new UpacaraMatcher(mockRepo, failingLlm);
+    const result = await matcher.match('upacara pembersihan dan penyucian untuk bangunan kantor baru');
+
+    expect(result.matchType).toBe('candidates');
+    expect(result.candidates.length).toBeGreaterThanOrEqual(1);
+    expect(result.candidates[0].upacara.id).toBe(12); // Melaspas Bangunan
+    expect(result.candidates[0].isTopMatch).toBe(true);
+  });
+
+  it('recommends Tumpek Landep for metallic vehicle blessing', async () => {
+    const failingLlm: LlmClient = {
+      async complete() {
+        throw new Error('LLM offline');
+      },
+      async *stream() {
+        yield '';
+      },
+    };
+
+    const matcher = new UpacaraMatcher(mockRepo, failingLlm);
+    const result = await matcher.match('upacara keselamatan untuk kendaraan mobil dan motor baru berbahan logam');
+
+    expect(result.matchType).toBe('candidates');
+    expect(result.candidates.length).toBeGreaterThanOrEqual(1);
+    expect(result.candidates[0].upacara.id).toBe(29); // Tumpek Landep
+    expect(result.candidates[0].isTopMatch).toBe(true);
+    expect(result.candidates[0].alasan).toContain('Tumpek Landep');
+  });
+
+  it('recommends Keruron when user describes pregnancy miscarriage', async () => {
+    const failingLlm: LlmClient = {
+      async complete() {
+        throw new Error('LLM offline');
+      },
+      async *stream() {
+        yield '';
+      },
+    };
+
+    const matcher = new UpacaraMatcher(mockRepo, failingLlm);
+    const result = await matcher.match('upacara penyucian setelah keguguran janin dalam kandungan');
+
+    expect(result.matchType).toBe('candidates');
+    expect(result.candidates.length).toBeGreaterThanOrEqual(1);
+    expect(result.candidates[0].upacara.id).toBe(15); // Keruron
+    expect(result.candidates[0].isTopMatch).toBe(true);
+  });
+
+  it('recommends Rambut Sedana for business prosperity and financial fortune', async () => {
+    const failingLlm: LlmClient = {
+      async complete() {
+        throw new Error('LLM offline');
+      },
+      async *stream() {
+        yield '';
+      },
+    };
+
+    const matcher = new UpacaraMatcher(mockRepo, failingLlm);
+    const result = await matcher.match('upacara untuk kelancaran rezeki dan usaha dagang toko');
+
+    expect(result.matchType).toBe('candidates');
+    expect(result.candidates.length).toBeGreaterThanOrEqual(1);
+    expect(result.candidates[0].upacara.id).toBe(34); // Rambut Sedana
+    expect(result.candidates[0].isTopMatch).toBe(true);
+  });
+
+  it('handles minor typos in search queries via fuzzy matching', async () => {
+    const failingLlm: LlmClient = {
+      async complete() {
+        throw new Error('LLM offline');
+      },
+      async *stream() {
+        yield '';
+      },
+    };
+
+    const matcher = new UpacaraMatcher(mockRepo, failingLlm);
+
+    // Typo: "pawihan" for "pawiwahan"
+    const resPawihan = await matcher.match('upacara pawihan adat bali');
+    expect(resPawihan.matchType).toBe('candidates');
+    expect(resPawihan.candidates[0].upacara.id).toBe(17); // Pawidhi Widana
+
+    // Typo: "melapas" for "melaspas"
+    const resMelapas = await matcher.match('upacara melapas rumah baru');
+    expect(resMelapas.matchType).toBe('candidates');
+    expect(resMelapas.candidates[0].upacara.id).toBe(12); // Melaspas Bangunan
+  });
+
+  it('includes tab navigation hints in candidate reasons for otonan or hari raya', async () => {
+    const failingLlm: LlmClient = {
+      async complete() {
+        throw new Error('LLM offline');
+      },
+      async *stream() {
+        yield '';
+      },
+    };
+
+    const matcher = new UpacaraMatcher(mockRepo, failingLlm);
+    const result = await matcher.match('upacara kelahiran weton enam bulan anak');
+
+    expect(result.matchType).toBe('candidates');
+    const otonanCand = result.candidates.find((c) => c.upacara.id === 23);
+    expect(otonanCand).toBeDefined();
+    expect(otonanCand?.alasan).toContain('Tab Otonan');
   });
 });

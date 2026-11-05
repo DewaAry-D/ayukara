@@ -1,4 +1,7 @@
-import { Model, DataTypes, Sequelize, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { Model, DataTypes, Sequelize, InferAttributes, InferCreationAttributes, CreationOptional, NonAttribute } from 'sequelize';
+import type { UpacaraRangkaian } from './UpacaraRangkaian';
+import type { Tingkatan } from './Tingkatan';
+import type { BantenSetItem } from './BantenSetItem';
 
 export class BantenSet extends Model<
   InferAttributes<BantenSet>,
@@ -12,6 +15,9 @@ export class BantenSet extends Model<
   declare asal: 'manual' | 'internet';
   declare status: CreationOptional<'unverified' | 'verified' | 'rejected'>;
   declare created_at: CreationOptional<Date>;
+  declare rangkaian?: NonAttribute<UpacaraRangkaian>;
+  declare tingkatan?: NonAttribute<Tingkatan>;
+  declare items?: NonAttribute<BantenSetItem[]>;
 
   static initModel(sequelize: Sequelize): typeof BantenSet {
     return BantenSet.init(

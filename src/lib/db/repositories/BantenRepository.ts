@@ -9,6 +9,7 @@ import {
   Sumber,
   Tingkatan,
   Upacara,
+  UpacaraRangkaian,
 } from '../models';
 
 export interface BantenRepositoryOptions {
@@ -23,29 +24,32 @@ export class BantenRepository {
     initModels(this.sequelize);
   }
 
-  async findBantenSet(options: {
+  async findBantenSets(options: {
     upacaraId: number;
-    tingkatanId: number;
+    tingkatanId?: number;
     rangkaianId?: number | null;
     daerahId?: number | null;
-  }): Promise<BantenSet | null> {
+  }): Promise<BantenSet[]> {
     const whereClause: WhereOptions<BantenSet> = {
       upacara_id: options.upacaraId,
-      tingkatan_id: options.tingkatanId,
     };
 
-    if (options.rangkaianId !== undefined) {
+    if (options.tingkatanId !== undefined) {
+      whereClause.tingkatan_id = options.tingkatanId;
+    }
+    if (options.rangkaianId !== undefined && options.rangkaianId !== null) {
       whereClause.rangkaian_id = options.rangkaianId;
     }
-    if (options.daerahId !== undefined) {
+    if (options.daerahId !== undefined && options.daerahId !== null) {
       whereClause.daerah_id = options.daerahId;
     }
 
-    return BantenSet.findOne({
+    return BantenSet.findAll({
       where: whereClause,
       include: [
         { model: Upacara, as: 'upacara' },
         { model: Tingkatan, as: 'tingkatan' },
+        { model: UpacaraRangkaian, as: 'rangkaian' },
         {
           model: BantenSetItem,
           as: 'items',
@@ -61,9 +65,21 @@ export class BantenRepository {
         },
       ],
       order: [
+        ['tingkatan_id', 'ASC'],
+        ['rangkaian_id', 'ASC'],
         [{ model: BantenSetItem, as: 'items' }, 'urutan', 'ASC'],
       ],
     });
+  }
+
+  async findBantenSet(options: {
+    upacaraId: number;
+    tingkatanId: number;
+    rangkaianId?: number | null;
+    daerahId?: number | null;
+  }): Promise<BantenSet | null> {
+    const sets = await this.findBantenSets(options);
+    return sets.length > 0 ? sets[0] : null;
   }
 
   async getWhitelistedDomains(): Promise<string[]> {

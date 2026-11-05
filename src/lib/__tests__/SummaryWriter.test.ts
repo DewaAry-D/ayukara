@@ -70,5 +70,54 @@ describe('SummaryWriter (Fase 4)', () => {
     expect(result.summaryText).toBe('Upacara tanpa kutipan banten.');
     expect(result.citations.length).toBe(0);
   });
+
+  it('deduplicates citations when multiple banten items share the same source', async () => {
+    const mockLlm = new MockLlmClient({
+      mockText: 'Rencana dengan sarana Pejati [1] [1] dan Daksina [1].',
+    });
+
+    const writer = new SummaryWriter(mockLlm);
+    const result = await writer.generateSummary({
+      ...planInput,
+      bantenItems: [
+        {
+          nama: 'Pejati',
+          lokasi: 'Pamerjan',
+          jumlah: '1 soroh',
+          kutipan: {
+            teks: 'Kutipan A',
+            sumberJudul: 'Lontar Kusuma Dewa',
+          },
+        },
+        {
+          nama: 'Daksina',
+          lokasi: 'Pamerjan',
+          jumlah: '1 soroh',
+          kutipan: {
+            teks: 'Kutipan B',
+            sumberJudul: 'Lontar Kusuma Dewa',
+          },
+        },
+        {
+          nama: 'Canang',
+          lokasi: 'Pelangkiran',
+          jumlah: '5 tanding',
+          kutipan: {
+            teks: 'Kutipan C',
+            sumberJudul: 'Lontar Kusuma Dewa',
+          },
+        },
+      ],
+    });
+
+    // Sumber yang sama hanya muncul satu kali di citations
+    expect(result.citations.length).toBe(1);
+    expect(result.citations[0].id).toBe(1);
+    expect(result.citations[0].sourceTitle).toBe('Lontar Kusuma Dewa');
+
+    // Sitasi ganda berturut-turut [1] [1] dibersihkan menjadi [1]
+    expect(result.summaryText).toContain('Pejati [1] dan Daksina [1]');
+    expect(result.summaryText).not.toContain('[1] [1]');
+  });
 });
 

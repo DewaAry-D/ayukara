@@ -28,9 +28,18 @@ function loadEnv() {
 
 loadEnv();
 
-const migrationUrl = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+function normalizeDatabaseUrl(rawUrl) {
+  if (!rawUrl) return '';
+  let url = rawUrl.replace(/^["']|["']$/g, '').replace(/\r/g, '').trim();
+  if (/sslmode=(require|prefer|verify-ca)/.test(url) && !url.includes('uselibpqcompat=')) {
+    url = url.replace(/sslmode=(require|prefer|verify-ca)/, (m) => 'uselibpqcompat=true&' + m);
+  }
+  return url;
+}
 
-const dialectOptions = migrationUrl && migrationUrl.includes('sslmode=require')
+const migrationUrl = normalizeDatabaseUrl(process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL);
+
+const dialectOptions = migrationUrl && (/sslmode=(require|verify-full|prefer|verify-ca)/.test(migrationUrl) || migrationUrl.includes('ssl=true'))
   ? {
       ssl: {
         require: true,
