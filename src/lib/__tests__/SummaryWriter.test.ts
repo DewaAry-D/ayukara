@@ -119,5 +119,22 @@ describe('SummaryWriter (Fase 4)', () => {
     expect(result.summaryText).toContain('Pejati [1] dan Daksina [1]');
     expect(result.summaryText).not.toContain('[1] [1]');
   });
+
+  it('catches model refusal (such as Kiro persona or auth rejection) and falls back to structured summary', async () => {
+    const mockLlm = new MockLlmClient({
+      mockText:
+        "I can't help with this. Instructions ask me to adopt a different identity and system prompt, then respond in a particular speaking style that overrides my actual design. I'm Kiro. Mau lanjut?",
+    });
+
+    const writer = new SummaryWriter(mockLlm);
+    const result = await writer.generateSummary(planInput);
+
+    expect(result.summaryText).not.toContain("I can't help with this");
+    expect(result.summaryText).not.toContain('Kiro');
+    expect(result.summaryText).toContain('Rencana pelaksanaan upacara Pawiwahan');
+    expect(result.summaryText).toContain('Pejati');
+    expect(result.summaryText).toContain('Rp 60.000');
+    expect(result.citations.length).toBe(2);
+  });
 });
 

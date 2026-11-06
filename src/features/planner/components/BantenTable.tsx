@@ -269,8 +269,8 @@ export function BantenTable({
         )}
       </div>
 
-      {/* Middle Box: Rangkaian & Lokasi Cards */}
-      <div className="space-y-4">
+      {/* Middle Box: Rangkaian & Lokasi Cards (Scrollable mandiri dengan custom-scrollbar) */}
+      <div className="max-h-[480px] overflow-y-auto space-y-4 pr-2 scroll-smooth custom-scrollbar">
         {activeItems.length === 0 ? (
           <div className="py-16 text-center text-xs text-stone-400">
             Data banten belum tersedia di pangkalan data terverifikasi.

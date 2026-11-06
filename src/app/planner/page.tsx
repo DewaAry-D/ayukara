@@ -45,7 +45,7 @@ export default function PlannerPage() {
         </div>
 
         {/* Header Content */}
-        <div className="relative z-10 max-w-4xl mx-auto px-6 space-y-3">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 lg:px-20 space-y-3">
           <div className="text-xs font-semibold tracking-wider uppercase text-[#A8543A]">
             LANGKAH 1 DARI 2 · RENCANAKAN UPACARA
           </div>
