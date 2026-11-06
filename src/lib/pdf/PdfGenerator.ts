@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs';
 import PDFDocument from 'pdfkit';
 
 export interface PdfBantenItem {
@@ -15,6 +17,7 @@ export interface PdfPlanData {
   tingkatanNama: string;
   dateSummary: string;
   dateDetail?: string;
+  weton?: string;
   bantenItems: PdfBantenItem[];
   totalHargaStr?: string;
   waktuPengambilanWita?: string;
@@ -27,13 +30,16 @@ export class PdfGenerator {
   public async generate(data: PdfPlanData): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
       try {
+        const pageWidth = 595.28;
+        const pageHeight = 841.89;
         const leftMargin = 45;
         const rightMargin = 550;
         const contentWidth = rightMargin - leftMargin; // 505pt
+        const pageMaxY = 780;
 
         const doc = new PDFDocument({
-          margin: leftMargin,
           size: 'A4',
+          margin: 0, // Dikelola presisi secara manual untuk mencegah page-break tak disengaja
           bufferPages: true,
           info: {
             Title: `Rencana Yadnya - ${data.upacaraNama}`,
@@ -47,421 +53,355 @@ export class PdfGenerator {
         doc.on('end', () => resolve(Buffer.concat(buffers)));
         doc.on('error', (err) => reject(err));
 
-        const nowWita =
-          data.createdAtWita ||
-          new Intl.DateTimeFormat('id-ID', {
-            dateStyle: 'full',
-            timeStyle: 'medium',
-            timeZone: 'Asia/Makassar',
-          }).format(new Date()) + ' WITA';
-
         // -------------------------------------------------------------
-        // HEADER PERUSAHAAN / PLATFORM
+        // HELPER FUNCTIONS
         // -------------------------------------------------------------
-        doc
-          .fontSize(18)
-          .font('Helvetica-Bold')
-          .fillColor('#1B3022')
-          .text('AYUKARA', leftMargin, doc.y, { width: contentWidth });
+        const drawSectionHeader = (title: string, y: number): number => {
+          const badgeSize = 22;
+          doc.save();
 
-        doc
-          .fontSize(9)
-          .font('Helvetica')
-          .fillColor('#C25E2E')
-          .text('Pendamping Perencanaan Upacara Yadnya Hindu Bali', leftMargin, doc.y, {
-            width: contentWidth,
-          });
+          // Kotak badge hijau tua
+          doc.fillColor('#24473F').rect(leftMargin, y, badgeSize, badgeSize).fill();
 
-        doc.moveDown(0.4);
-        doc
-          .strokeColor('#E5DFD5')
-          .lineWidth(1)
-          .moveTo(leftMargin, doc.y)
-          .lineTo(rightMargin, doc.y)
-          .stroke();
-        doc.y += 8;
-        doc.x = leftMargin;
-
-        // -------------------------------------------------------------
-        // DETAIL UPACARA & TINGKATAN
-        // -------------------------------------------------------------
-        doc
-          .fontSize(14)
-          .font('Helvetica-Bold')
-          .fillColor('#1B3022')
-          .text(`Rencana Upacara: ${data.upacaraNama}`, leftMargin, doc.y, {
-            width: contentWidth,
-          });
-
-        doc.moveDown(0.2);
-        doc
-          .fontSize(9.5)
-          .font('Helvetica')
-          .fillColor('#5C6B5E')
-          .text(
-            `Tingkatan: ${data.tingkatanNama} · Jalur: ${this.formatTabName(data.tab)}`,
-            leftMargin,
-            doc.y,
-            { width: contentWidth }
-          );
-
-        if (data.personName) {
-          doc.moveDown(0.2);
-          doc
-            .fontSize(9)
-            .font('Helvetica')
-            .fillColor('#5C6B5E')
-            .text(`Pemohon / Nama Anak: ${data.personName}`, leftMargin, doc.y, {
-              width: contentWidth,
-            });
-        }
-
-        doc.y += 10;
-        doc.x = leftMargin;
-
-        // -------------------------------------------------------------
-        // 1. BAGIAN TANGGAL
-        // -------------------------------------------------------------
-        doc
-          .fontSize(11)
-          .font('Helvetica-Bold')
-          .fillColor('#1B3022')
-          .text('1. Penetapan Hari & Kalender Bali', leftMargin, doc.y, {
-            width: contentWidth,
-          });
-
-        doc.moveDown(0.2);
-        doc
-          .fontSize(10)
-          .font('Helvetica-Bold')
-          .fillColor('#C25E2E')
-          .text(data.dateSummary, leftMargin, doc.y, { width: contentWidth });
-
-        if (data.dateDetail) {
-          doc.moveDown(0.2);
-          doc
-            .fontSize(9)
-            .font('Helvetica')
-            .fillColor('#5C6B5E')
-            .text(data.dateDetail, leftMargin, doc.y, { width: contentWidth });
-        }
-
-        doc.y += 10;
-        doc.x = leftMargin;
-
-        // -------------------------------------------------------------
-        // 2. DAFTAR BANTEN / UPAKARA
-        // -------------------------------------------------------------
-        doc
-          .fontSize(11)
-          .font('Helvetica-Bold')
-          .fillColor('#1B3022')
-          .text('2. Rincian Upakara / Kebutuhan Banten', leftMargin, doc.y, {
-            width: contentWidth,
-          });
-
-        doc.y += 6;
-        doc.x = leftMargin;
-
-        const printTableHeader = () => {
-          doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#57534E');
-          const hY = doc.y;
-          doc.text('No', 45, hY, { width: 25 });
-          doc.text('Nama Banten', 75, hY, { width: 220 });
-          doc.text('Lokasi Penempatan', 300, hY, { width: 130 });
-          doc.text('Jumlah', 435, hY, { width: 55 });
-          doc.text('Status', 495, hY, { width: 55, align: 'right' });
-          doc.y = hY + 12;
-          doc.x = leftMargin;
-
-          doc
-            .strokeColor('#E7E5E4')
-            .lineWidth(0.5)
-            .moveTo(leftMargin, doc.y)
-            .lineTo(rightMargin, doc.y)
-            .stroke();
-          doc.y += 5;
-          doc.x = leftMargin;
-        };
-
-        if (!data.bantenItems || data.bantenItems.length === 0) {
-          doc
-            .fontSize(9)
-            .font('Helvetica-Oblique')
-            .fillColor('#78716C')
-            .text('Data banten belum tersedia di pangkalan data terverifikasi.', leftMargin, doc.y, {
-              width: contentWidth,
-            });
-          doc.y += 6;
-          doc.x = leftMargin;
-        } else {
-          printTableHeader();
-
-          doc.font('Helvetica').fontSize(8).fillColor('#1C1917');
-          data.bantenItems.forEach((item, idx) => {
-            const nameH = doc.heightOfString(item.nama, { width: 220 });
-            const locText = item.lokasi || '-';
-            const locH = doc.heightOfString(locText, { width: 130 });
-            const rowH = Math.max(nameH, locH, 12);
-
-            // Periksa batas halaman bawah
-            if (doc.y + rowH + 8 > 740) {
-              doc.addPage();
-              printTableHeader();
-            }
-
-            const rowY = doc.y;
-            doc.text(String(idx + 1), 45, rowY, { width: 25 });
-            doc.text(item.nama, 75, rowY, { width: 220 });
-            doc.text(locText, 300, rowY, { width: 130 });
-            doc.text(item.jumlah || '1 soroh', 435, rowY, { width: 55 });
-            doc.text(
-              item.status === 'verified' ? 'Tervalidasi' : 'Belum Valid',
-              495,
-              rowY,
-              { width: 55, align: 'right' }
-            );
-
-            doc.y = rowY + rowH + 4;
-            doc.x = leftMargin;
-          });
-        }
-
-        doc.y += 8;
-        doc.x = leftMargin;
-
-        // -------------------------------------------------------------
-        // 3. ESTIMASI BIAYA & TOTAL
-        // -------------------------------------------------------------
-        if (doc.y > 690) {
-          doc.addPage();
-        }
-
-        doc
-          .fontSize(11)
-          .font('Helvetica-Bold')
-          .fillColor('#1B3022')
-          .text('3. Perkiraan Anggaran Biaya', leftMargin, doc.y, {
-            width: contentWidth,
-          });
-
-        doc.moveDown(0.2);
-        doc
-          .fontSize(10)
-          .font('Helvetica-Bold')
-          .fillColor('#1B3022')
-          .text(
-            `Total Estimasi: ${data.totalHargaStr || 'Harga belum tersedia'}`,
-            leftMargin,
-            doc.y,
-            { width: contentWidth }
-          );
-
-        if (data.waktuPengambilanWita) {
-          doc.moveDown(0.2);
-          doc
-            .fontSize(8)
-            .font('Helvetica')
-            .fillColor('#78716C')
-            .text(`Data harga pasar per: ${data.waktuPengambilanWita}`, leftMargin, doc.y, {
-              width: contentWidth,
-            });
-        }
-
-        doc.y += 10;
-        doc.x = leftMargin;
-
-        // -------------------------------------------------------------
-        // 4. RINGKASAN & CATATAN SASTRA
-        // -------------------------------------------------------------
-        if (data.aiSummary) {
-          if (doc.y > 670) {
-            doc.addPage();
+          // Bintang / bunga emas 8 kelopak di dalam badge
+          const cx = leftMargin + badgeSize / 2;
+          const cy = y + badgeSize / 2;
+          const radius = badgeSize * 0.28;
+          doc.strokeColor('#C9A24A').lineWidth(1.8).lineCap('round');
+          for (let angle = 0; angle < 180; angle += 45) {
+            const rad = (angle * Math.PI) / 180;
+            const dx = Math.cos(rad) * radius;
+            const dy = Math.sin(rad) * radius;
+            doc.moveTo(cx - dx, cy - dy).lineTo(cx + dx, cy + dy).stroke();
           }
 
+          // Banner bar hijau tua
+          const bannerX = leftMargin + badgeSize + 6;
+          const bannerW = contentWidth - badgeSize - 6;
+          doc.fillColor('#24473F').rect(bannerX, y, bannerW, badgeSize).fill();
+          doc.restore();
+
+          // Teks banner putih tebal
           doc
-            .fontSize(11)
+            .fontSize(10)
             .font('Helvetica-Bold')
-            .fillColor('#1B3022')
-            .text('4. Catatan Pelaksanaan Sastra', leftMargin, doc.y, {
-              width: contentWidth,
+            .fillColor('#FFFFFF')
+            .text(title, bannerX + 10, y + 6, {
+              width: bannerW - 20,
+              lineBreak: false,
             });
 
-          doc.moveDown(0.3);
-          doc.x = leftMargin;
+          return y + badgeSize;
+        };
 
+        const colWidths = [30, 210, 185, 80];
+        const colPositions = [
+          leftMargin,
+          leftMargin + colWidths[0],
+          leftMargin + colWidths[0] + colWidths[1],
+          leftMargin + colWidths[0] + colWidths[1] + colWidths[2],
+        ];
+
+        const drawTableHeader = (y: number): number => {
+          const headerH = 18;
+          doc.save();
+          doc.fillColor('#24473F').rect(leftMargin, y, contentWidth, headerH).fill();
+          doc.strokeColor('#3D6359').lineWidth(0.75);
+          doc.moveTo(colPositions[1], y).lineTo(colPositions[1], y + headerH).stroke();
+          doc.moveTo(colPositions[2], y).lineTo(colPositions[2], y + headerH).stroke();
+          doc.moveTo(colPositions[3], y).lineTo(colPositions[3], y + headerH).stroke();
+          doc.restore();
+
+          doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#FFFFFF');
+          doc.text('No', colPositions[0], y + 4, { width: colWidths[0], align: 'center', lineBreak: false });
+          doc.text('Nama Banten', colPositions[1] + 6, y + 4, { width: colWidths[1] - 12, lineBreak: false });
+          doc.text('Lokasi Penempatan', colPositions[2] + 6, y + 4, { width: colWidths[2] - 12, lineBreak: false });
+          doc.text('Jumlah', colPositions[3], y + 4, { width: colWidths[3], align: 'center', lineBreak: false });
+
+          return y + headerH;
+        };
+
+        // -------------------------------------------------------------
+        // 1. BRAND HEADER (Logo & Rencana Ayukara)
+        // -------------------------------------------------------------
+        const logoCandidates = [
+          path.resolve(process.cwd(), 'public/images/logo_ayukara_hd.png'),
+          path.resolve(process.cwd(), 'public/images/logo_ayukara.png'),
+          path.join(__dirname, '../../../public/images/logo_ayukara_hd.png'),
+        ];
+        let foundLogoPath: string | null = null;
+        for (const candidate of logoCandidates) {
+          if (fs.existsSync(candidate)) {
+            foundLogoPath = candidate;
+            break;
+          }
+        }
+
+        if (foundLogoPath) {
+          try {
+            doc.image(foundLogoPath, leftMargin + 2, 42, { width: 48, height: 48 });
+          } catch {
+            // Abaikan jika berkas gambar tidak dapat dimuat
+          }
+        }
+
+        doc
+          .fontSize(21)
+          .font('Times-Bold')
+          .fillColor('#1F3B3A')
+          .text('Rencana', leftMargin + 60, 46, { lineBreak: false })
+          .text('Ayukara', leftMargin + 60, 68, { lineBreak: false });
+
+        // -------------------------------------------------------------
+        // 2. METADATA SECTION (2 Kolom x 2 Baris dengan Garis Bawah)
+        // -------------------------------------------------------------
+        const metaY = 104;
+        const col1X = leftMargin;
+        const col1W = 235;
+        const col2X = 315;
+        const col2W = 235;
+
+        // Baris 1: Nama Upacara & Tingkatan Upacara
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#1F3B3A').text('Nama Upacara:', col1X, metaY, { lineBreak: false });
+        doc.fontSize(8.5).font('Helvetica-Oblique').fillColor('#374151').text(data.upacaraNama || '-', col1X, metaY + 12, { width: col1W - 10, lineBreak: false });
+        doc.strokeColor('#9CA3AF').lineWidth(0.75).moveTo(col1X, metaY + 24).lineTo(col1X + col1W, metaY + 24).stroke();
+
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#1F3B3A').text('Tingkatan Upacara:', col2X, metaY, { lineBreak: false });
+        doc.fontSize(8.5).font('Helvetica-Oblique').fillColor('#374151').text(data.tingkatanNama || '-', col2X, metaY + 12, { width: col2W, lineBreak: false });
+        doc.strokeColor('#9CA3AF').lineWidth(0.75).moveTo(col2X, metaY + 24).lineTo(col2X + col2W, metaY + 24).stroke();
+
+        // Baris 2: Tanggal & Weton
+        const metaY2 = metaY + 31;
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#1F3B3A').text('Tanggal:', col1X, metaY2, { lineBreak: false });
+        doc.fontSize(8.5).font('Helvetica-Oblique').fillColor('#374151').text(data.dateSummary || '-', col1X, metaY2 + 12, { width: col1W - 10, lineBreak: false });
+        doc.strokeColor('#9CA3AF').lineWidth(0.75).moveTo(col1X, metaY2 + 24).lineTo(col1X + col1W, metaY2 + 24).stroke();
+
+        const wetonText = data.weton || data.dateDetail || '-';
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#1F3B3A').text('Weton:', col2X, metaY2, { lineBreak: false });
+        doc.fontSize(8.5).font('Helvetica-Oblique').fillColor('#374151').text(wetonText, col2X, metaY2 + 12, { width: col2W, lineBreak: false });
+        doc.strokeColor('#9CA3AF').lineWidth(0.75).moveTo(col2X, metaY2 + 24).lineTo(col2X + col2W, metaY2 + 24).stroke();
+
+        // -------------------------------------------------------------
+        // 3. SECTION 1: RINCIAN UPAKARA / KEBUTUHAN BANTEN
+        // -------------------------------------------------------------
+        let curY = metaY2 + 36;
+        curY = drawSectionHeader('Rincian Upakara / Kebutuhan Banten', curY);
+
+        curY += 5;
+        curY = drawTableHeader(curY);
+
+        if (!data.bantenItems || data.bantenItems.length === 0) {
+          const emptyH = 22;
+          doc.strokeColor('#24473F').lineWidth(0.6);
+          doc.rect(leftMargin, curY, contentWidth, emptyH).stroke();
+          doc
+            .fontSize(8.5)
+            .font('Helvetica-Oblique')
+            .fillColor('#6B7280')
+            .text('Data banten belum tersedia di pangkalan data terverifikasi.', leftMargin + 10, curY + 6, {
+              width: contentWidth - 20,
+              align: 'center',
+              lineBreak: false,
+            });
+          curY += emptyH;
+        } else {
+          for (let idx = 0; idx < data.bantenItems.length; idx++) {
+            const item = data.bantenItems[idx];
+            doc.font('Helvetica').fontSize(8);
+            const nameH = doc.heightOfString(item.nama, { width: colWidths[1] - 12 });
+            const locText = item.lokasi || '-';
+            const locH = doc.heightOfString(locText, { width: colWidths[2] - 12 });
+            const rowH = Math.max(nameH, locH, 11) + 4;
+
+            // Periksa batas halaman
+            if (curY + rowH > pageMaxY) {
+              doc.addPage();
+              curY = drawTableHeader(48);
+            }
+
+            // Garis baris tabel
+            doc.strokeColor('#24473F').lineWidth(0.6);
+            doc.rect(leftMargin, curY, contentWidth, rowH).stroke();
+            doc.moveTo(colPositions[1], curY).lineTo(colPositions[1], curY + rowH).stroke();
+            doc.moveTo(colPositions[2], curY).lineTo(colPositions[2], curY + rowH).stroke();
+            doc.moveTo(colPositions[3], curY).lineTo(colPositions[3], curY + rowH).stroke();
+
+            // Isi teks sel
+            doc.fontSize(8).font('Helvetica').fillColor('#1F2937');
+            doc.text(String(idx + 1), colPositions[0], curY + 4, { width: colWidths[0], align: 'center', lineBreak: false });
+            doc.text(item.nama, colPositions[1] + 6, curY + 4, { width: colWidths[1] - 12 });
+            doc.text(locText, colPositions[2] + 6, curY + 4, { width: colWidths[2] - 12 });
+            doc.text(item.jumlah || '1 soroh', colPositions[3], curY + 4, { width: colWidths[3], align: 'center', lineBreak: false });
+
+            curY += rowH;
+          }
+        }
+
+        // -------------------------------------------------------------
+        // 4. SECTION 2: PERKIRAAN ANGGARAN BIAYA
+        // -------------------------------------------------------------
+        if (curY + 76 > pageMaxY) {
+          doc.addPage();
+          curY = 48;
+        } else {
+          curY += 10;
+        }
+
+        curY = drawSectionHeader('Perkiraan Anggaran Biaya', curY);
+        curY += 5;
+
+        const boxH = 46;
+        doc.save();
+        doc.fillColor('#24473F').rect(leftMargin, curY, contentWidth, boxH).fill();
+        doc.restore();
+
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF').text('Total Estimasi:', leftMargin + 14, curY + 11, { lineBreak: false });
+        const labelW = doc.widthOfString('Total Estimasi: ') + 20;
+
+        doc
+          .fontSize(15)
+          .font('Helvetica-Bold')
+          .fillColor('#4ADE80')
+          .text(data.totalHargaStr || 'Harga belum tersedia', leftMargin + labelW, curY + 9, { lineBreak: false });
+
+        doc
+          .fontSize(7.5)
+          .font('Helvetica-Oblique')
+          .fillColor('#9CA3AF')
+          .text('*Harga merupakan estimasi bisa jadi berbeda beda tergantung harga bahan dan daerah.', leftMargin + 14, curY + 30, {
+            width: contentWidth - 28,
+            lineBreak: false,
+          });
+
+        curY += boxH;
+
+        // -------------------------------------------------------------
+        // 5. SECTION 3: CATATAN PELAKSANAAN SASTRA (Bila aiSummary ada)
+        // -------------------------------------------------------------
+        if (data.aiSummary) {
           const lines = data.aiSummary
             .split(/\n+/)
             .map((l) => l.trim())
-            .filter((l) => {
-              if (!l) return false;
-              return l.replace(/^[•\-*.\s]+$/, '').length > 0;
-            });
+            .filter((l) => l && l.replace(/^[•\-*.\s]+$/, '').length > 0);
 
-          for (const line of lines) {
-            if (doc.y > 730) {
+          if (lines.length > 0) {
+            if (curY + 45 > pageMaxY) {
               doc.addPage();
-            }
-            doc.x = leftMargin;
-
-            // A. Heading tingkat 2 atau 3 (## atau ###)
-            if (line.startsWith('## ') || line.startsWith('### ')) {
-              const headingText = line.replace(/^#{2,3}\s*/, '').replace(/\*\*/g, '').trim();
-              if (!headingText) continue;
-              doc.moveDown(0.3);
-              doc
-                .fontSize(9.5)
-                .font('Helvetica-Bold')
-                .fillColor('#1B3022')
-                .text(headingText, leftMargin, doc.y, { width: contentWidth });
-              doc.moveDown(0.2);
-              doc.x = leftMargin;
-              continue;
+              curY = 48;
+            } else {
+              curY += 10;
             }
 
-            // B. Poin daftar (•, -, *, atau angka 1.)
-            if (/^[•\-*]\s*/.test(line) || /^\d+\.\s*/.test(line)) {
-              const itemRaw = line.replace(/^[•\-*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
-              if (!itemRaw) continue;
+            curY = drawSectionHeader('Catatan Pelaksanaan Sastra', curY);
+            curY += 6;
 
-              const boldMatch = itemRaw.match(/^\*\*([^*]+)\*\*:?\s*(.*)$/);
-              const bulletX = leftMargin + 10;
-              const bulletW = contentWidth - 10;
-
-              if (boldMatch) {
-                const titleStr = boldMatch[1].replace(/:$/, '').trim();
-                const descStr = boldMatch[2].replace(/\*\*/g, '').trim();
-
-                doc
-                  .fontSize(8.5)
-                  .font('Helvetica-Bold')
-                  .fillColor('#1B3022')
-                  .text(`• ${titleStr}: `, bulletX, doc.y, { continued: true, width: bulletW })
-                  .font('Helvetica')
-                  .fillColor('#292524')
-                  .text(descStr, { continued: false, width: bulletW });
-              } else {
-                const cleanItem = itemRaw.replace(/\*\*/g, '').trim();
-                doc
-                  .fontSize(8.5)
-                  .font('Helvetica')
-                  .fillColor('#292524')
-                  .text(`• ${cleanItem}`, bulletX, doc.y, { width: bulletW, lineGap: 1.5 });
+            for (const line of lines) {
+              if (curY + 16 > pageMaxY) {
+                doc.addPage();
+                curY = 48;
               }
 
-              doc.y += 3;
-              doc.x = leftMargin;
-              continue;
+              if (line.startsWith('## ') || line.startsWith('### ')) {
+                const headingText = line.replace(/^#{2,3}\s*/, '').replace(/\*\*/g, '').trim();
+                doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#1F3B3A').text(headingText, leftMargin, curY, { width: contentWidth, lineBreak: false });
+                curY += 12;
+                continue;
+              }
+
+              if (/^[•\-*]\s*/.test(line) || /^\d+\.\s*/.test(line)) {
+                const itemRaw = line.replace(/^[•\-*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+                const boldMatch = itemRaw.match(/^\*\*([^*]+)\*\*:?\s*(.*)$/);
+                const bulletX = leftMargin + 8;
+                const bulletW = contentWidth - 8;
+
+                if (boldMatch) {
+                  const titleStr = boldMatch[1].replace(/:$/, '').trim();
+                  const descStr = boldMatch[2].replace(/\*\*/g, '').trim();
+                  doc
+                    .fontSize(7.5)
+                    .font('Helvetica-Bold')
+                    .fillColor('#1F3B3A')
+                    .text(`• ${titleStr}: `, bulletX, curY, { continued: true, width: bulletW })
+                    .font('Helvetica')
+                    .fillColor('#374151')
+                    .text(descStr, { continued: false, width: bulletW });
+                  curY += Math.max(doc.heightOfString(`${titleStr}: ${descStr}`, { width: bulletW }), 10) + 2;
+                } else {
+                  const cleanItem = itemRaw.replace(/\*\*/g, '').trim();
+                  doc.fontSize(7.5).font('Helvetica').fillColor('#374151').text(`• ${cleanItem}`, bulletX, curY, { width: bulletW });
+                  curY += doc.heightOfString(`• ${cleanItem}`, { width: bulletW }) + 2;
+                }
+                continue;
+              }
+
+              if (/^\[\d+\]/.test(line)) {
+                doc.fontSize(7).font('Helvetica-Oblique').fillColor('#6B7280').text(line, leftMargin, curY, { width: contentWidth, lineBreak: false });
+                curY += 10;
+                continue;
+              }
+
+              const cleanParagraph = line.replace(/\*\*/g, '').trim();
+              doc.fontSize(7.5).font('Helvetica').fillColor('#374151').text(cleanParagraph, leftMargin, curY, { width: contentWidth });
+              curY += doc.heightOfString(cleanParagraph, { width: contentWidth }) + 2;
             }
-
-            // C. Sitasi sumber [1]
-            if (/^\[\d+\]/.test(line)) {
-              doc
-                .fontSize(8)
-                .font('Helvetica-Oblique')
-                .fillColor('#78716C')
-                .text(line, leftMargin, doc.y, { width: contentWidth });
-              doc.y += 3;
-              doc.x = leftMargin;
-              continue;
-            }
-
-            // D. Paragraf biasa
-            const cleanParagraph = line.replace(/\*\*/g, '').trim();
-            if (!cleanParagraph) continue;
-
-            doc
-              .fontSize(8.5)
-              .font('Helvetica')
-              .fillColor('#292524')
-              .text(cleanParagraph, leftMargin, doc.y, { width: contentWidth, lineGap: 2 });
-
-            doc.y += 4;
-            doc.x = leftMargin;
           }
-
-          doc.moveDown(0.5);
-          doc.x = leftMargin;
         }
 
         // -------------------------------------------------------------
-        // DISCLAIMER & FOOTER
-        // -------------------------------------------------------------
-        if (doc.y > 690) {
-          doc.addPage();
-        }
-        doc.x = leftMargin;
-
-        doc
-          .strokeColor('#E5DFD5')
-          .lineWidth(0.5)
-          .moveTo(leftMargin, doc.y)
-          .lineTo(rightMargin, doc.y)
-          .stroke();
-        doc.moveDown(0.5);
-        doc.x = leftMargin;
-
-        doc
-          .fontSize(7.5)
-          .font('Helvetica-Bold')
-          .fillColor('#C25E2E')
-          .text(
-            'PERINGATAN BUDAYA & KEAGAMAAN: Ayukara adalah pendamping, bukan pengganti sulinggih/pemangku. Segala penentuan hari baik dan rincian upakara tetap merujuk pada petunjuk sulinggih serta desa kala patra setempat.',
-            leftMargin,
-            doc.y,
-            { width: contentWidth }
-          );
-
-        doc.moveDown(0.3);
-        doc.x = leftMargin;
-
-        doc
-          .fontSize(7.5)
-          .font('Helvetica')
-          .fillColor('#78716C')
-          .text(
-            'DISCLAIMER HARGA: Harga merupakan estimasi bisa jadi berbeda beda tergantung harga bahan dan daerah.',
-            leftMargin,
-            doc.y,
-            { width: contentWidth }
-          );
-
-        doc.moveDown(0.3);
-        doc.x = leftMargin;
-
-        doc
-          .fontSize(7)
-          .font('Helvetica')
-          .fillColor('#A8A29E')
-          .text(
-            `Dokumen ini dicetak pada: ${nowWita} · Ayukara Platform (Bali DigiFest 2026)`,
-            leftMargin,
-            doc.y,
-            {
-              width: contentWidth,
-              align: 'right',
-            }
-          );
-
-        // -------------------------------------------------------------
-        // RUNNING FOOTER: NOMOR HALAMAN
+        // RUNNING DECORATIONS OVER ALL PAGES
         // -------------------------------------------------------------
         const pageRange = doc.bufferedPageRange();
         for (let i = pageRange.start; i < pageRange.start + pageRange.count; i++) {
           doc.switchToPage(i);
-          const oldBottomMargin = doc.page.margins.bottom;
-          doc.page.margins.bottom = 0;
+
+          // Lengkungan sudut emas atas (kiri & kanan)
+          doc.save();
+          doc.fillColor('#C9A24A');
+          doc.path('M 0 0 L 75 0 C 35 0 0 35 0 75 Z').fill();
+          doc.path(
+            `M ${pageWidth} 0 L ${pageWidth - 75} 0 C ${pageWidth - 35} 0 ${pageWidth} 35 ${pageWidth} 75 Z`
+          ).fill();
+
+          // Garis strip emas bawah
+          doc.rect(0, pageHeight - 5, pageWidth, 5).fill('#C9A24A');
+          doc.restore();
+
+          // URL terpusat di atas dokumen
           doc
-            .fontSize(7)
+            .fontSize(8)
             .font('Helvetica')
-            .fillColor('#A8A29E')
+            .fillColor('#4B5563')
+            .text('https://ayukara.vercel.app', 0, 15, {
+              width: pageWidth,
+              align: 'center',
+              underline: true,
+              lineBreak: false,
+            });
+
+          // Peringatan / disclaimer budaya di kaki halaman
+          doc
+            .fontSize(7.5)
+            .font('Helvetica-Oblique')
+            .fillColor('#4B5563')
             .text(
-              `Halaman ${i + 1} dari ${pageRange.count}`,
+              'Ayukara adalah pendamping, bukan pengganti sulinggih/pemangku. Segala penentuan hari baik dan rincian upakara tetap merujuk pada petunjuk sulinggih serta desa kala patra setempat.',
               leftMargin,
-              800,
-              { width: contentWidth, align: 'center', lineBreak: false }
+              pageHeight - 34,
+              { width: contentWidth, align: 'center', lineBreak: true }
             );
-          doc.page.margins.bottom = oldBottomMargin;
+
+          // Penomoran halaman jika dokumen lebih dari 1 halaman
+          if (pageRange.count > 1) {
+            doc
+              .fontSize(7)
+              .font('Helvetica')
+              .fillColor('#9CA3AF')
+              .text(`Halaman ${i + 1} dari ${pageRange.count}`, leftMargin, pageHeight - 16, {
+                width: contentWidth,
+                align: 'right',
+                lineBreak: false,
+              });
+          }
         }
 
         doc.end();
@@ -469,17 +409,6 @@ export class PdfGenerator {
         reject(err);
       }
     });
-  }
-
-  private formatTabName(tab: 'dewasa' | 'otonan' | 'hari_raya'): string {
-    switch (tab) {
-      case 'dewasa':
-        return 'Cari Hari Baik (Dewasa Ayu)';
-      case 'otonan':
-        return 'Perhitungan Otonan';
-      case 'hari_raya':
-        return 'Jadwal Hari Raya Tetap';
-    }
   }
 }
 

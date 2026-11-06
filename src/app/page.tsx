@@ -42,14 +42,15 @@ export default function HomePage() {
         {/* Hero Content Container */}
         <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 lg:px-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           {/* Left Column: Banten / Pawiwahan Artwork */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-start">
-            <div className="relative w-full max-w-[420px] lg:max-w-none aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/60">
+          <div className="lg:col-span-5 flex justify-center lg:justify-start items-center">
+            <div className="relative w-full max-w-[360px] sm:max-w-[420px] lg:max-w-[600px]">
               <Image
                 src="/images/hero-pawiwahan.webp"
                 alt="Upakara Banten Yadnya Hindu Bali"
-                fill
+                width={1622}
+                height={1488}
                 priority
-                className="object-cover object-center"
+                className="w-full h-full lg:scale-120  object-contain"
               />
             </div>
           </div>

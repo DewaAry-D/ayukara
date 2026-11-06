@@ -9,6 +9,7 @@ export interface ExportPdfButtonProps {
     tingkatanNama: string;
     dateSummary: string;
     dateDetail?: string;
+    weton?: string;
     bantenItems: Array<{
       nama: string;
       lokasi?: string | null;

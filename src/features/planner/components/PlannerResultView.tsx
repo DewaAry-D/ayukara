@@ -63,6 +63,7 @@ export function PlannerResultView({ resultData }: PlannerResultViewProps) {
   // Format ringkasan tanggal untuk PDF dan tampilan
   let dateSummary = '-';
   let dateDetail = '';
+  let wetonStr = '-';
 
   if (resultData.tab === 'dewasa') {
     if (activeRec) {
@@ -80,9 +81,12 @@ export function PlannerResultView({ resultData }: PlannerResultViewProps) {
         typeof activeRec.dateInfo.wewaran.saptawara === 'object'
           ? activeRec.dateInfo.wewaran.saptawara.nama
           : activeRec.dateInfo.wewaran.saptawara;
-      dateDetail = `${sapta} ${panca} · Wuku ${activeRec.dateInfo.wuku.nama} · Sasih ${activeRec.dateInfo.sasih.nama} (${activeRec.alasan.join(', ')})`;
+      const wukuNama = activeRec.dateInfo.wuku?.nama || '';
+      wetonStr = `${sapta} ${panca}${wukuNama ? ` (Wuku ${wukuNama})` : ''}`;
+      dateDetail = `${sapta} ${panca} · Wuku ${wukuNama} · Sasih ${activeRec.dateInfo.sasih.nama} (${activeRec.alasan.join(', ')})`;
     } else {
       dateSummary = 'Tidak ditemukan hari baik yang memenuhi kriteria';
+      wetonStr = '-';
     }
   } else if (resultData.tab === 'otonan') {
     dateSummary = resultData.selectedOtonanDate
@@ -92,6 +96,9 @@ export function PlannerResultView({ resultData }: PlannerResultViewProps) {
           month: 'long',
           year: 'numeric',
         })
+      : '-';
+    wetonStr = resultData.weton
+      ? `${resultData.weton}${resultData.wuku ? ` (Wuku ${resultData.wuku})` : ''}`
       : '-';
     dateDetail = `Weton: ${resultData.weton || '-'} · Wuku: ${resultData.wuku || '-'} (Siklus 210 Hari Pawukon)`;
   } else {
@@ -103,6 +110,7 @@ export function PlannerResultView({ resultData }: PlannerResultViewProps) {
           year: 'numeric',
         })
       : 'Aturan penentuan belum tersedia';
+    wetonStr = resultData.penjelasanPenentuan || '-';
     dateDetail = resultData.penjelasanPenentuan || 'Aturan penentuan belum tersedia';
   }
 
@@ -213,6 +221,7 @@ export function PlannerResultView({ resultData }: PlannerResultViewProps) {
                 tingkatanNama: resultData.tingkatanNama,
                 dateSummary,
                 dateDetail,
+                weton: wetonStr,
                 bantenItems: pdfBantenItems,
                 totalHargaStr,
                 waktuPengambilanWita: resultData.waktuPengambilanWita,
