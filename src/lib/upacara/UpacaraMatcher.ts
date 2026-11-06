@@ -42,9 +42,9 @@ interface LlmMatchResponse {
 const STOP_WORDS = new Set([
   'saya', 'kami', 'kita', 'dia', 'mereka', 'anda', 'kamu',
   'mau', 'ingin', 'mencari', 'cari', 'minta', 'butuh', 'membutuhkan',
-  'hari', 'baik', 'dewasa', 'ayu', 'kapan', 'waktu', 'tanggal',
-  'upacara', 'yadnya', 'acara', 'ritual', 'upakara',
-  'untuk', 'buat', 'bagi', 'kepada', 'pada', 'saat', 'ketika',
+  'hari', 'raya', 'baik', 'dewasa', 'ayu', 'kapan', 'waktu', 'tanggal', 'jadwal',
+  'upacara', 'yadnya', 'acara', 'ritual', 'upakara', 'perayaan',
+  'untuk', 'buat', 'bagi', 'kepada', 'pada', 'saat', 'ketika', 'tentang',
   'yang', 'dan', 'atau', 'di', 'ke', 'dari', 'dengan', 'tanpa',
   'ini', 'itu', 'tersebut', 'adalah', 'yaitu', 'ada', 'bisa', 'dapat',
   'tolong', 'bantu', 'rekomendasi', 'saran', 'bagaimana', 'apa',
@@ -167,6 +167,9 @@ function computeSemanticScore(
     if (nameWords.includes(token)) {
       score += 25;
       if (!reason) reason = `Terkait langsung dengan upacara ${upacara.nama}`;
+    } else if (isFuzzyMatch(token, cleanNama)) {
+      score += 35;
+      if (!reason) reason = `Mirip dengan nama upacara ${upacara.nama}`;
     } else if (nameWords.some((w) => isFuzzyMatch(token, w))) {
       score += 15;
       if (!reason) reason = `Mirip dengan istilah nama upacara ${upacara.nama}`;
@@ -187,7 +190,7 @@ function computeSemanticScore(
       for (const al of aliases) {
         const alTokens = al.split(' ');
         if (alTokens.some((w) => isFuzzyMatch(token, w))) {
-          score += 20;
+          score += 15;
           if (!reason) reason = `Mendekati istilah '${al}'`;
           aliasMatched = true;
           break;
@@ -695,6 +698,128 @@ export class UpacaraMatcher {
     }
 
     // =========================================================================
+    // TAHAP 1.2: Cek jika input singkat (<= 3 kata) yang hanya berisi kata henti + 1 kata inti cocok persis
+    // =========================================================================
+    if (queryTokens.length <= 3 && substantiveTokens.length === 1) {
+      const coreToken = substantiveTokens[0];
+      for (const upacara of allCandidates) {
+        const cleanNama = normalizeText(upacara.nama);
+        if (cleanNama === coreToken) {
+          return {
+            matchType: 'exact',
+            selectedUpacara: upacara,
+            candidates: [
+              {
+                upacara,
+                alasan: `Nama upacara ${upacara.nama} sesuai dengan pencarian`,
+                isTopMatch: true,
+              },
+            ],
+            message: 'Upacara sesuai',
+          };
+        }
+
+        if (upacara.alias) {
+          for (const al of upacara.alias) {
+            const cleanAl = normalizeText(al);
+            if (cleanAl === coreToken) {
+              return {
+                matchType: 'exact',
+                selectedUpacara: upacara,
+                candidates: [
+                  {
+                    upacara,
+                    alasan: `Istilah '${al}' sesuai dengan upacara ${upacara.nama}`,
+                    isTopMatch: true,
+                  },
+                ],
+                message: 'Upacara sesuai',
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // TAHAP 1.3: Cek toleransi saltik (typo / fuzzy matching) untuk kata tunggal atau frasa pendek
+    // =========================================================================
+    const candidateToMatch =
+      substantiveTokens.length === 1 && queryTokens.length <= 2
+        ? substantiveTokens[0]
+        : queryTokens.length <= 2
+        ? cleanQuery
+        : '';
+
+    if (candidateToMatch && candidateToMatch.length >= 4) {
+      let bestFuzzyMatch: {
+        upacara: UpacaraMatchItem;
+        distance: number;
+        matchedWord: string;
+      } | null = null;
+
+      for (const upacara of allCandidates) {
+        const cleanNama = normalizeText(upacara.nama);
+        const nameTokens = cleanNama.split(' ');
+
+        // Cek nama lengkap dan token dalam nama upacara
+        if (isFuzzyMatch(candidateToMatch, cleanNama)) {
+          const dist = levenshteinDistance(candidateToMatch, cleanNama);
+          if (!bestFuzzyMatch || dist < bestFuzzyMatch.distance) {
+            bestFuzzyMatch = { upacara, distance: dist, matchedWord: upacara.nama };
+          }
+        } else {
+          for (const nw of nameTokens) {
+            if (nw.length >= 4 && isFuzzyMatch(candidateToMatch, nw)) {
+              const dist = levenshteinDistance(candidateToMatch, nw);
+              if (!bestFuzzyMatch || dist < bestFuzzyMatch.distance) {
+                bestFuzzyMatch = { upacara, distance: dist, matchedWord: upacara.nama };
+              }
+            }
+          }
+        }
+
+        // Cek alias kanonikal
+        if (upacara.alias) {
+          for (const al of upacara.alias) {
+            const cleanAl = normalizeText(al);
+            const alTokens = cleanAl.split(' ');
+            if (isFuzzyMatch(candidateToMatch, cleanAl)) {
+              const dist = levenshteinDistance(candidateToMatch, cleanAl);
+              if (!bestFuzzyMatch || dist < bestFuzzyMatch.distance) {
+                bestFuzzyMatch = { upacara, distance: dist, matchedWord: al };
+              }
+            } else {
+              for (const at of alTokens) {
+                if (at.length >= 4 && isFuzzyMatch(candidateToMatch, at)) {
+                  const dist = levenshteinDistance(candidateToMatch, at);
+                  if (!bestFuzzyMatch || dist < bestFuzzyMatch.distance) {
+                    bestFuzzyMatch = { upacara, distance: dist, matchedWord: al };
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (bestFuzzyMatch) {
+        return {
+          matchType: 'exact',
+          selectedUpacara: bestFuzzyMatch.upacara,
+          candidates: [
+            {
+              upacara: bestFuzzyMatch.upacara,
+              alasan: `Mendekati '${bestFuzzyMatch.matchedWord}' (${bestFuzzyMatch.upacara.nama})`,
+              isTopMatch: true,
+            },
+          ],
+          message: 'Upacara sesuai',
+        };
+      }
+    }
+
+    // =========================================================================
     // TAHAP 2: Hitung Skor Semantik Lokal (Intent, Deskripsi, & Cluster Scoring)
     // =========================================================================
     const scoredList: { upacara: UpacaraMatchItem; score: number; reason: string }[] = [];
@@ -759,12 +884,11 @@ export class UpacaraMatcher {
       })
       .join('\n');
 
-    const systemPrompt = `Anda adalah asisten cerdas pencocokan upacara Yadnya Hindu Bali.
-Tugas Anda adalah menganalisis deskripsi atau kebutuhan upacara dari pengguna dan HANYA memilih upacara yang relevan dari DAFTAR TERTUTUP berikut:
+    const systemPrompt = `Tugas Anda: Analisis deskripsi atau kebutuhan upacara dari pengguna dan HANYA pilih upacara yang relevan dari DAFTAR TERTUTUP berikut:
 ${closedListText}
 
-ATURAN KETAT:
-1. Anda DILARANG mengarang upacara atau ID di luar daftar di atas (Aturan Mutlak #15).
+PANDUAN:
+1. Dilarang mengarang upacara atau ID di luar daftar di atas (Aturan Mutlak #15).
 2. Keluarkan dalam format JSON { "matches": [{ "id": number, "alasan": string }] }.
 3. Berikan 1 hingga maksimal 3 rekomendasi upacara yang paling relevan. Jika deskripsi pengguna bersifat umum (misalnya tentang tahapan daur hidup anak, kedukaan, atau pembersihan lingkungan), sajikan hingga 3 rekomendasi berurutan dari yang paling sesuai.
 4. Tuliskan alasan rekomendasi yang ramah, informatif, dan menjelaskan mengapa upacara tersebut sesuai dengan kebutuhan pengguna.

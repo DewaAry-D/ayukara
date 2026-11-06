@@ -228,9 +228,8 @@ export class PriceEstimator {
           if (!searchResult.content) continue;
 
           // Ekstraksi harga dengan LLM
-          const systemPrompt = `Anda adalah sistem ekstraksi harga sarana banten Yadnya Hindu Bali.
-Tugas Anda mengekstrak rentang estimasi harga (dalam angka IDR) untuk banten "${item.nama}".
-ATURAN KETAT:
+          const systemPrompt = `Tugas Anda: Ekstraksi rentang estimasi harga (dalam angka IDR) untuk banten "${item.nama}" dari teks sumber.
+PANDUAN:
 1. Angka harga HARUS tercantum secara eksplisit di teks sumber.
 2. Kolom 'kutipan' WAJIB memuat kalimat persis yang memuat angka harga tersebut.
 3. Dilarang mengarang angka jika tidak tertulis.`;
@@ -392,8 +391,7 @@ ATURAN KETAT:
 
       const validResults = searchResults.filter((r) => r.content && r.content.trim().length > 0);
 
-      const systemPrompt = `Anda adalah sistem penaksir estimasi biaya paket upacara Yadnya Hindu Bali.
-Tugas Anda memperkirakan dan merangkum rentang estimasi biaya wajar (hargaMin dan hargaMax dalam IDR) untuk paket banten upacara "${input.upacaraNama}" pada tingkatan "${tingkatanLabel}".
+      const systemPrompt = `Tugas Anda: Perkirakan dan rangkum rentang estimasi biaya wajar (hargaMin dan hargaMax dalam IDR) untuk paket banten upacara "${input.upacaraNama}" pada tingkatan "${tingkatanLabel}".
 
 PANDUAN TAKSASI:
 1. Analisis artikel dan tautan marketplace penelusuran web terlampir secara cermat.

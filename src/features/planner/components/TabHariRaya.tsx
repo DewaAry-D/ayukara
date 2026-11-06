@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getHariRayaListAction, resolveHariRayaAction } from '../actions';
 import { UpacaraMatchItem } from '@/lib/upacara/UpacaraMatcher';
 import { ResolveHariRayaActionResult } from '../types';
@@ -12,6 +12,8 @@ const AVAILABLE_YEARS = [2026, 2027, 2028];
 
 export function TabHariRaya() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlUpacaraId = searchParams.get('upacaraId');
 
   // Master list of Hari Raya Upacara
   const [hariRayaList, setHariRayaList] = useState<UpacaraMatchItem[]>([]);
@@ -38,12 +40,21 @@ export function TabHariRaya() {
       if (isMounted) {
         setHariRayaList(list);
         setIsLoadingList(false);
-        // Default select Galungan (id: 3)
-        const galungan = list.find((u) => u.nama.toLowerCase().includes('galungan')) || list[0];
-        if (galungan) {
-          setSelectedUpacara(galungan);
+
+        const targetId = urlUpacaraId ? parseInt(urlUpacaraId, 10) : null;
+        const initialSelected =
+          (targetId ? list.find((u) => u.id === targetId) : null) ||
+          list.find((u) => u.nama.toLowerCase().includes('galungan')) ||
+          list[0];
+
+        if (initialSelected) {
+          setSelectedUpacara(initialSelected);
+          const targetIndex = list.findIndex((u) => u.id === initialSelected.id);
+          if (targetIndex !== -1) {
+            setCurrentPage(Math.floor(targetIndex / ITEMS_PER_PAGE) + 1);
+          }
           setIsResolving(true);
-          resolveHariRayaAction(galungan.id, 2027).then((res) => {
+          resolveHariRayaAction(initialSelected.id, 2027).then((res) => {
             if (isMounted) {
               setResolvedResult(res);
               setIsResolving(false);
@@ -62,7 +73,21 @@ export function TabHariRaya() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [urlUpacaraId]);
+
+  // Sync selection if URL search params change dynamically
+  useEffect(() => {
+    if (!urlUpacaraId || hariRayaList.length === 0) return;
+    const targetId = parseInt(urlUpacaraId, 10);
+    const targetItem = hariRayaList.find((u) => u.id === targetId);
+    if (targetItem && selectedUpacara?.id !== targetItem.id) {
+      handleSelectCard(targetItem);
+      const targetIndex = hariRayaList.findIndex((u) => u.id === targetItem.id);
+      if (targetIndex !== -1) {
+        setCurrentPage(Math.floor(targetIndex / ITEMS_PER_PAGE) + 1);
+      }
+    }
+  }, [urlUpacaraId, hariRayaList, selectedUpacara]);
 
   // Filtered items
   const filteredItems = useMemo(() => {

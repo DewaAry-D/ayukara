@@ -6,6 +6,7 @@ import { matchUpacaraAction } from '../actions';
 import { CandidateResult, UpacaraMatchItem } from '@/lib/upacara/UpacaraMatcher';
 import { TingkatanCards } from './TingkatanCards';
 import { LoadingModal } from './LoadingModal';
+import { FixedCeremonyNoticeModal } from './FixedCeremonyNoticeModal';
 
 export function TabCariHariBaik() {
   const router = useRouter();
@@ -20,6 +21,18 @@ export function TabCariHariBaik() {
   const [selectedUpacara, setSelectedUpacara] = useState<UpacaraMatchItem | null>(null);
   const [candidates, setCandidates] = useState<CandidateResult[]>([]);
   const [exactMatchNotice, setExactMatchNotice] = useState<string | null>(null);
+
+  // Modal notice for fixed ceremony (hari raya / otonan)
+  const [redirectModal, setRedirectModal] = useState<{
+    isOpen: boolean;
+    upacara: UpacaraMatchItem | null;
+    targetTab: 'hari_raya' | 'otonan';
+  }>({
+    isOpen: false,
+    upacara: null,
+    targetTab: 'hari_raya',
+  });
+  const [dismissedNoticeId, setDismissedNoticeId] = useState<number | null>(null);
 
   // Dates
   const todayStr = new Date().toISOString().split('T')[0];
@@ -56,13 +69,75 @@ export function TabCariHariBaik() {
     if (res.matchType === 'exact' && res.selectedUpacara) {
       setSelectedUpacara(res.selectedUpacara);
       setExactMatchNotice(`Upacara sesuai: ${res.selectedUpacara.nama}`);
+
+      if (res.selectedUpacara.jenis_penentuan === 'hari_raya_tetap') {
+        setRedirectModal({
+          isOpen: true,
+          upacara: res.selectedUpacara,
+          targetTab: 'hari_raya',
+        });
+      } else if (res.selectedUpacara.jenis_penentuan === 'otonan') {
+        setRedirectModal({
+          isOpen: true,
+          upacara: res.selectedUpacara,
+          targetTab: 'otonan',
+        });
+      }
     } else if (res.matchType === 'candidates' && res.candidates && res.candidates.length > 0) {
       setCandidates(res.candidates);
       setSelectedUpacara(res.candidates[0].upacara);
+
+      const top = res.candidates[0].upacara;
+      if (top.jenis_penentuan === 'hari_raya_tetap') {
+        setRedirectModal({
+          isOpen: true,
+          upacara: top,
+          targetTab: 'hari_raya',
+        });
+      } else if (top.jenis_penentuan === 'otonan') {
+        setRedirectModal({
+          isOpen: true,
+          upacara: top,
+          targetTab: 'otonan',
+        });
+      }
     } else {
       setSelectedUpacara(null);
       setSearchError('Upacara tidak ditemukan. Coba gunakan istilah lain atau periksa tab Otonan / Hari Raya.');
     }
+  }
+
+  function handleSelectCandidate(candUpacara: UpacaraMatchItem) {
+    setSelectedUpacara(candUpacara);
+    if (candUpacara.jenis_penentuan === 'hari_raya_tetap') {
+      setRedirectModal({
+        isOpen: true,
+        upacara: candUpacara,
+        targetTab: 'hari_raya',
+      });
+    } else if (candUpacara.jenis_penentuan === 'otonan') {
+      setRedirectModal({
+        isOpen: true,
+        upacara: candUpacara,
+        targetTab: 'otonan',
+      });
+    }
+  }
+
+  function handleSwitchTab() {
+    if (!redirectModal.upacara) return;
+    const target = redirectModal.targetTab;
+    const upacaraId = redirectModal.upacara.id;
+    setRedirectModal((prev) => ({ ...prev, isOpen: false }));
+    if (target === 'hari_raya') {
+      router.push(`/planner?tab=hari_raya&upacaraId=${upacaraId}`);
+    } else {
+      router.push(`/planner?tab=otonan`);
+    }
+  }
+
+  function handleStayHere() {
+    handleReset();
   }
 
   function handleReset() {
@@ -71,6 +146,8 @@ export function TabCariHariBaik() {
     setCandidates([]);
     setSearchError(null);
     setExactMatchNotice(null);
+    setDismissedNoticeId(null);
+    setRedirectModal({ isOpen: false, upacara: null, targetTab: 'hari_raya' });
   }
 
   function applyDateChip(type: 'month' | '3months' | 'this_year' | 'next_year') {
@@ -98,6 +175,30 @@ export function TabCariHariBaik() {
   function handleSubmit() {
     if (!selectedUpacara) {
       setSearchError('Silakan cari dan pilih salah satu upacara terlebih dahulu.');
+      return;
+    }
+
+    if (
+      selectedUpacara.jenis_penentuan === 'hari_raya_tetap' &&
+      dismissedNoticeId !== selectedUpacara.id
+    ) {
+      setRedirectModal({
+        isOpen: true,
+        upacara: selectedUpacara,
+        targetTab: 'hari_raya',
+      });
+      return;
+    }
+
+    if (
+      selectedUpacara.jenis_penentuan === 'otonan' &&
+      dismissedNoticeId !== selectedUpacara.id
+    ) {
+      setRedirectModal({
+        isOpen: true,
+        upacara: selectedUpacara,
+        targetTab: 'otonan',
+      });
       return;
     }
 
@@ -146,7 +247,7 @@ export function TabCariHariBaik() {
                 setInputText(e.target.value);
                 if (searchError) setSearchError(null);
               }}
-              placeholder="Contoh: Otonan anak pertama umur 6 bulan, atau upacara saat pindah rumah baru"
+              placeholder="Contoh: Upacara pernikahan (Pawiwahan), potong gigi, atau upacara saat pindah rumah baru (Melaspas)"
               className="w-full rounded-xl bg-white/[0.06] border border-white/20 p-4 text-sm text-white placeholder:text-stone-400 focus:border-[#C9A24A] focus:outline-hidden transition-colors"
             />
             <div className="flex items-center justify-between text-xs text-stone-400 pt-1.5 px-1">
@@ -161,7 +262,7 @@ export function TabCariHariBaik() {
           </div>
 
           <p className="text-xs text-stone-400 pt-1">
-            AI akan otomatis memilih tab yang sesuai, misalnya Otonan atau Hari Raya, dari deskripsi Anda.
+            AI akan membantu mencocokkan upacara dan merekomendasikan dewasa ayu (hari baik) yang sesuai.
           </p>
         </div>
 
@@ -217,13 +318,23 @@ export function TabCariHariBaik() {
                     }`}
                   >
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-bold text-sm text-white font-serif">
                           {cand.upacara.nama}
                         </span>
                         {cand.isTopMatch && (
                           <span className="rounded-full bg-[#A8543A] text-white px-2 py-0.5 text-[10px] font-bold">
                             Paling sesuai
+                          </span>
+                        )}
+                        {cand.upacara.jenis_penentuan === 'hari_raya_tetap' && (
+                          <span className="rounded-full bg-[#C9A24A]/20 border border-[#C9A24A]/40 text-[#F3E9CF] px-2 py-0.5 text-[10px] font-medium">
+                            Hari Raya Tetap
+                          </span>
+                        )}
+                        {cand.upacara.jenis_penentuan === 'otonan' && (
+                          <span className="rounded-full bg-[#C9A24A]/20 border border-[#C9A24A]/40 text-[#F3E9CF] px-2 py-0.5 text-[10px] font-medium">
+                            Otonan
                           </span>
                         )}
                       </div>
@@ -234,7 +345,7 @@ export function TabCariHariBaik() {
 
                     <button
                       type="button"
-                      onClick={() => setSelectedUpacara(cand.upacara)}
+                      onClick={() => handleSelectCandidate(cand.upacara)}
                       className={`ml-4 px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
                         isSelected
                           ? 'bg-[#A8543A] text-white'
@@ -371,6 +482,15 @@ export function TabCariHariBaik() {
         onCancel={() => setIsNavigating(false)}
         title="Menyiapkan rekomendasi..."
         subtitle="Ayukara sedang memproses rencana Anda."
+      />
+
+      {/* Modal Dialog Konfirmasi Hari Raya Tetap / Otonan */}
+      <FixedCeremonyNoticeModal
+        isOpen={redirectModal.isOpen}
+        upacara={redirectModal.upacara}
+        targetTab={redirectModal.targetTab}
+        onSwitchTab={handleSwitchTab}
+        onStayHere={handleStayHere}
       />
     </div>
   );

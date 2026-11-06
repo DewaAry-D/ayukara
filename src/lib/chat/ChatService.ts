@@ -298,7 +298,9 @@ PETUNJUK MENJAWAB:
 
     // Tangani kemungkinan penolakan identitas dari model upstream (misal persona Kiro / model coding)
     const isIdentityRefusal =
-      /bertentangan dengan identitas|identitas Kiro|fungsi Kiro|asisten pengembangan/i.test(text);
+      /bertentangan dengan identitas|identitas Kiro|fungsi Kiro|asisten pengembangan|i can't help with this|i cannot help with this|adopt a different identity|i'm kiro|i am kiro|overrides my actual design/i.test(
+        text
+      );
 
     if (isIdentityRefusal || !text.trim()) {
       const calculationMatch = contextText.match(/\[DATA RESMI [^\]]+\]:\s*([\s\S]*?)(?=\n\n---|\n\n\[\d+\]|$)/);
@@ -373,7 +375,11 @@ PETUNJUK MENJAWAB:
       })) {
         if (!isIdentityRefusal) {
           initialBuffer += chunk;
-          if (/bertentangan dengan identitas|identitas Kiro|fungsi Kiro/i.test(initialBuffer)) {
+          if (
+            /bertentangan dengan identitas|identitas Kiro|fungsi Kiro|i can't help with this|i cannot help with this|adopt a different identity|i'm kiro|i am kiro|overrides my actual design/i.test(
+              initialBuffer
+            )
+          ) {
             isIdentityRefusal = true;
             break;
           }

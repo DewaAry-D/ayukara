@@ -11,6 +11,8 @@ describe('UpacaraMatcher', () => {
   const mockMasterList: UpacaraMatchItem[] = [
     { id: 1, nama: 'Kajeng Kliwon', alias: ['Kajeng Kliwon'], jenis_penentuan: 'hari_raya_tetap' },
     { id: 3, nama: 'Galungan', alias: [], jenis_penentuan: 'hari_raya_tetap' },
+    { id: 4, nama: 'Kuningan', alias: ['Kuningan'], jenis_penentuan: 'hari_raya_tetap' },
+    { id: 8, nama: 'Nyepi/Tahun Baru Saka', alias: ['Nyepi', 'Tahun Baru Saka'], jenis_penentuan: 'hari_raya_tetap' },
     { id: 12, nama: 'Melaspas Bangunan', alias: ['Melaspas'], jenis_penentuan: 'dewasa' },
     { id: 13, nama: 'Ngeringkes / Atiwa-tiwa', alias: ['Ngaben', 'Pelebon'], jenis_penentuan: 'dewasa' },
     { id: 14, nama: 'Ngelungah', alias: ['Ngelungah'], jenis_penentuan: 'dewasa' },
@@ -368,5 +370,40 @@ describe('UpacaraMatcher', () => {
     const otonanCand = result.candidates.find((c) => c.upacara.id === 23);
     expect(otonanCand).toBeDefined();
     expect(otonanCand?.alasan).toContain('Tab Otonan');
+  });
+
+  it('matches all-lowercase, prefixes, and typos for fixed holy days and otonan directly', async () => {
+    const mockLlm = new MockLlmClient();
+    const matcher = new UpacaraMatcher(mockRepo, mockLlm);
+
+    // All lowercase
+    const resGalunganLower = await matcher.match('galungan');
+    expect(resGalunganLower.matchType).toBe('exact');
+    expect(resGalunganLower.selectedUpacara?.id).toBe(3);
+
+    // Typo: "galugan"
+    const resGaluganTypo = await matcher.match('galugan');
+    expect(resGaluganTypo.matchType).toBe('exact');
+    expect(resGaluganTypo.selectedUpacara?.id).toBe(3);
+
+    // Prefix + Typo: "upacara galugan"
+    const resPrefixGalugan = await matcher.match('upacara galugan');
+    expect(resPrefixGalugan.matchType).toBe('exact');
+    expect(resPrefixGalugan.selectedUpacara?.id).toBe(3);
+
+    // Typo: "nyepii"
+    const resNyepii = await matcher.match('nyepii');
+    expect(resNyepii.matchType).toBe('exact');
+    expect(resNyepii.selectedUpacara?.id).toBe(8);
+
+    // Typo: "otnan"
+    const resOtnan = await matcher.match('otnan');
+    expect(resOtnan.matchType).toBe('exact');
+    expect(resOtnan.selectedUpacara?.id).toBe(23);
+
+    // Typo: "kunigan"
+    const resKunigan = await matcher.match('kunigan');
+    expect(resKunigan.matchType).toBe('exact');
+    expect(resKunigan.selectedUpacara?.id).toBe(4);
   });
 });

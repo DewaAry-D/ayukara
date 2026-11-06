@@ -127,18 +127,16 @@ export class SummaryWriter {
         ? `Estimasi Biaya Paket: Rp ${input.hargaTotal.totalMin.toLocaleString('id-ID')} - Rp ${input.hargaTotal.totalMax.toLocaleString('id-ID')} (berdasarkan referensi pasar upakara)`
         : 'Estimasi Biaya: Belum ada patokan harga tetap, kisaran biaya banten bersifat fleksibel menyesuaikan fluktuasi bahan di pasar dan kesepakatan setempat. PENTING: DILARANG KERAS menulis angka "Rp 0" atau "Rp 0 - Rp 0".';
 
-    const systemPrompt = `Anda adalah asisten perangkum rencana yadnya Hindu Bali di Ayukara.
-Tugas Anda: buat narasi ringkasan rencana yang santun, jelas, terstruktur rapi, dan mudah dibaca dalam Bahasa Indonesia.
+    const systemPrompt = `Rangkum data rencana upacara yadnya Hindu Bali berikut ke dalam narasi terstruktur berbahasa Indonesia yang informatif, jelas, dan rapi.
 
-ATURAN STRUKTUR & TATA LETAK:
-1. Mulai langsung dengan paragraf pengantar singkat (1-2 kalimat) yang menyebutkan upacara, tingkatan, tanggal pelaksanaan, dan alasan pemilihan hari baik. JANGAN menulis judul besar seperti "# Ringkasan...".
-2. Jika ada pembagian tempat (lokasi) atau tahapan (rangkaian), TAMPILKAN DALAM BENTUK POIN DAFTAR (bullet points list):
+FORMAT & STRUKTUR:
+1. Paragraf pengantar singkat (1-2 kalimat): sebutkan nama upacara, tingkatan, tanggal pelaksanaan, dan alasan pemilihan hari baik. Hindari membuat judul heading seperti "# Ringkasan".
+2. Jika ada pembagian tempat (lokasi) atau tahapan (rangkaian), tampilkan dalam bentuk poin daftar:
    • **[Nama Tempat / Tahapan]:** [Daftar nama banten di tempat tersebut] [nomor sitasi jika ada]
    • **[Nama Tempat / Tahapan]:** [Daftar nama banten di tempat tersebut] [nomor sitasi jika ada]
-   Gunakan format tebal (**nama tempat:**) pada setiap label tempat agar jelas dan mudah dibaca.
-3. Tutup dengan paragraf singkat tentang estimasi biaya. DILARANG KERAS menuliskan angka "Rp 0" atau "Rp 0 - Rp 0". Jika harga spesifik belum ada, sampaikan bahwa perkiraan biaya banten menyesuaikan fluktuasi pasar dan kesepakatan serati banten atau pemangku setempat.
-4. DILARANG menambahkan fakta keagamaan/budaya baru di luar data input.
-5. Gunakan nomor sitasi [1], [2] secara proporsional di akhir kelompok banten, jangan mengulang sitasi yang sama di setiap kata.`;
+3. Paragraf penutup tentang estimasi biaya: sampaikan perkiraan biaya paket upacara secara wajar berdasarkan data yang tersedia. Jika belum ada harga spesifik, jelaskan bahwa perkiraan biaya banten menyesuaikan fluktuasi bahan di pasar dan kesepakatan pemangku atau serati banten setempat. Hindari menulis angka "Rp 0".
+4. Gunakan hanya informasi dari data yang disediakan tanpa mengarang fakta keagamaan atau budaya baru di luar daftar.
+5. Gunakan nomor sitasi [1], [2] secara proporsional di akhir kelompok banten.`;
 
     const userMessage = `DATA RENCANA YADNYA:
 Upacara: ${input.upacaraNama} (Tingkatan: ${input.tingkatanNama || 'Umum'})
@@ -183,12 +181,31 @@ ${citationsContext || 'Tidak ada sitasi teks'}`;
       }
     }
 
-    // Deteksi jika respon proxy/LLM adalah pesan error otentikasi (misal balasan dari gateway 9router)
-    const isErrorText =
-      /invalid api key|unauthorized|error:|failed to authenticate|incorrect api key/i.test(summaryText);
+    // Deteksi jika respon proxy/LLM adalah pesan error otentikasi atau penolakan persona (refusal)
+    const isErrorOrRefusalText =
+      /invalid api key|unauthorized|failed to authenticate|incorrect api key|i can't help with this|i cannot help with this|adopt a different identity|i'm kiro|i am kiro|overrides my actual design|mau lanjut\?|as an ai language model/i.test(
+        summaryText
+      );
 
-    if (isErrorText) {
-      summaryText = `Rencana upacara ${input.upacaraNama} (${input.tingkatanNama || 'Umum'}) telah disusun untuk tanggal ${input.tanggalInfo.tanggal || 'yang dipilih'}. Diperlukan ${input.bantenItems.length} sarana banten sesuai pedoman upakara yadnya Hindu Bali.`;
+    if (isErrorOrRefusalText) {
+      const bantenCount = input.bantenItems.length;
+      const tgl = input.tanggalInfo.tanggal || 'yang telah dipilih';
+      const ketTgl = input.tanggalInfo.keterangan ? ` (${input.tanggalInfo.keterangan})` : '';
+      const tingkat = input.tingkatanNama || 'Umum / Sederhana';
+
+      let fallbackText = `Rencana pelaksanaan upacara ${input.upacaraNama} dengan tingkatan ${tingkat} dijadwalkan pada ${tgl}${ketTgl}. Upacara ini membutuhkan ${bantenCount} sarana upakara (banten) yang telah disusun sesuai pedoman sastra yadnya Hindu Bali.\n\n`;
+
+      if (bantenListContext) {
+        fallbackText += `Daftar sarana upakara yang dipersiapkan:\n${bantenListContext}\n\n`;
+      }
+
+      if (input.hargaTotal && input.hargaTotal.totalMin > 0) {
+        fallbackText += `Estimasi biaya paket banten berkisar antara Rp ${input.hargaTotal.totalMin.toLocaleString('id-ID')} hingga Rp ${input.hargaTotal.totalMax.toLocaleString('id-ID')} berdasarkan referensi pasar upakara dan kesepakatan setempat.`;
+      } else {
+        fallbackText += `Perkiraan biaya sarana banten bersifat fleksibel dan dapat disesuaikan dengan fluktuasi harga bahan di pasar serta kesepakatan serati banten atau pemangku setempat.`;
+      }
+
+      summaryText = fallbackText;
     }
 
     return {
