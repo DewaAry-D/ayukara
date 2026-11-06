@@ -336,8 +336,12 @@ PETUNJUK MENJAWAB:
     const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
     const query = lastUserMessage?.content || '';
 
+    const recent = messages
+    .slice(-5, -1)
+    .map((m) => `${m.role === 'user' ? 'User' : 'Ayukara'}: ${m.content.slice(0, 300)}`)
+    .join('\n');
     // 1. Validasi Topik
-    const guardRes = await this.topicGuard.classify(query);
+    const guardRes = await this.topicGuard.classify(query, recent);
     if (guardRes.classification === 'out_of_scope') {
       yield guardRes.message || STANDARD_REJECTION_MESSAGE;
       return;
@@ -346,9 +350,10 @@ PETUNJUK MENJAWAB:
       yield guardRes.message || 'Mohon perjelas pertanyaan Anda seputar yadnya, banten, atau wariga.';
       return;
     }
-
-    // 2. Grounding
-    const { contextText, citations } = await this.getGroundingContext(query);
+  
+    // 2. Grounding (gabung pertanyaan user sebelumnya supaya topiknya tidak hilang)
+    const prevUser = messages.filter((m) => m.role === 'user').slice(-2).map((m) => m.content).join(' ');
+    const { contextText, citations } = await this.getGroundingContext(prevUser || query);
 
     const systemPrompt = `Bantulah pengguna aplikasi Ayukara dengan memberikan penjelasan informatif seputar penanggalan kalender Bali, hari raya, dewasa ayu (hari baik/duase), banten upakara, dan kebudayaan yadnya di Bali.
 Bahasa komunikasi: Bahasa Indonesia yang santun, jelas, dan edukatif.
@@ -371,7 +376,7 @@ PETUNJUK MENJAWAB:
     try {
       for await (const chunk of this.llmClient.stream({
         system: systemPrompt,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: messages.slice(-6).map((m) => ({ role: m.role, content: m.content })),
       })) {
         if (!isIdentityRefusal) {
           initialBuffer += chunk;
