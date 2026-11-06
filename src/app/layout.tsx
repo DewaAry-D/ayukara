@@ -17,9 +17,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Ayukara — Pendamping Perencanaan Upacara Yadnya',
+  title: 'Ayukara: Perencana Yadnya Hindu Bali',
   description:
-    'Pendamping perencanaan upacara yadnya Hindu Bali: dewasa ayu, tingkatan, banten, estimasi biaya, dan Chat AI berbasis sumber berkutipan.',
+    'Ayukara adalah asisten AI untuk merencanakan yadnya Hindu Bali: mencari dewasa ayu (hari baik), memilih tingkatan upacara nista, madya, atau utama, serta menyusun daftar banten dan perkiraan biayanya.',
 };
 
 export default function RootLayout({
@@ -31,7 +31,7 @@ export default function RootLayout({
     <html lang="id" className={`${fraunces.variable} ${plusJakartaSans.variable}`}>
       <body className="antialiased min-h-screen flex flex-col bg-[#1F3B3A] text-[#FBF8F2] font-sans selection:bg-[#A8543A] selection:text-white">
         <Navbar />
-        <main className="flex-1">
+        <main className="flex-1 pt-20 sm:pt-24">
           {children}
         </main>
         <Footer />

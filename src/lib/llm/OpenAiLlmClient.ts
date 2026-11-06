@@ -54,6 +54,8 @@ export class OpenAiLlmClient implements LlmClient {
     this.client = new OpenAI({
       apiKey: this.apiKey,
       baseURL: this.baseURL || undefined,
+      timeout: 20000,   
+      maxRetries: 1,
     });
   }
 
@@ -90,6 +92,7 @@ export class OpenAiLlmClient implements LlmClient {
       model: this.model,
       messages,
       temperature: args.temperature ?? 0.2,
+      max_tokens: 800
     };
 
     if (args.jsonSchema) {
@@ -162,6 +165,7 @@ export class OpenAiLlmClient implements LlmClient {
       messages,
       stream: true,
       temperature: 0.2,
+      max_tokens: 800,
     });
 
     for await (const chunk of stream) {

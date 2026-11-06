@@ -64,7 +64,7 @@ export default function HomePage() {
             {/* Description Glass Card */}
             <div className="w-full max-w-xl rounded-2xl bg-[#FBF8F2] border border-[#DDD3C1] p-6 sm:p-8 shadow-lg text-[#1F3B3A] leading-relaxed">
               <p className="text-sm sm:text-base font-normal">
-                Ayukara membantu Anda merencanakan berbagai upacara yadnya: menemukan alternatif dewasa ayu, memilih tingkatan yadnya, menyiapkan kebutuhan banten, hingga memperkirakan estimasi biaya, lengkap dengan penjelasan dan sumber rujukannya.
+              Asisten AI untuk perencanaan yadnya Hindu Bali seperti dewasa ayu, tingkatan upacara, kebutuhan banten, dan estimasi biaya, semuanya dengan sumber rujukan yang terverifikasi.
               </p>
             </div>
 

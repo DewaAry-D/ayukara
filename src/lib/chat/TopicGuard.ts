@@ -9,10 +9,16 @@ export interface TopicClassificationResult {
 }
 
 export const STANDARD_REJECTION_MESSAGE =
-  'Maaf, Ayukara hanya dapat membantu pertanyaan seputar upacara, banten, wariga, dewasa ayu, serta agama Hindu Bali dan upakara.';
+'Om Swastiastu 🙏 Saya Ayukara, asisten AI untuk membantu merencanakan yadnya Hindu Bali. ' +
+'Saya bisa membantu mencari dewasa ayu (hari baik), menjelaskan tingkatan upacara (nista, madya, utama), ' +
+'serta banten dan perkiraan biayanya. Maaf, pertanyaan tadi di luar topik tersebut. ' +
+'Coba tanyakan misalnya: "Banten apa saja untuk Galungan?" atau "Kapan hari baik untuk otonan?"';
 
 const AMBIGUOUS_CLARIFICATION_MESSAGE =
-  'Pertanyaan Anda tampak belum spesifik. Apakah bisa diperjelas upacara yadnya, banten, wariga, atau topik keagamaan Hindu Bali apa yang ingin Anda tanyakan?';
+'Om Swastiastu 🙏 Saya Ayukara, asisten AI untuk perencanaan yadnya Hindu Bali: ' +
+'dewasa ayu, tingkatan upacara, banten, dan perkiraan biayanya. ' +
+'Boleh diperjelas upacara atau topik apa yang ingin ditanyakan? ' +
+'Contoh: "Banten apa saja untuk upacara pawiwahan tingkat madya?"';
 
 // Kata kunci ranah budaya & keagamaan Hindu Bali
 const IN_SCOPE_KEYWORDS = [
