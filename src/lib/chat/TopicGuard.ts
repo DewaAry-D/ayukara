@@ -106,7 +106,7 @@ export class TopicGuard {
     return STANDARD_REJECTION_MESSAGE;
   }
 
-  public async classify(query: string): Promise<TopicClassificationResult> {
+  public async classify(query: string, history = ''): Promise<TopicClassificationResult> {
     const trimmed = (query || '').trim();
 
     if (!trimmed) {
@@ -133,15 +133,20 @@ export class TopicGuard {
       try {
         const systemPrompt = `Anda adalah Topic Classifier untuk aplikasi Ayukara (pendamping upacara yadnya Hindu Bali).
 Tugas Anda mengklasifikasikan pertanyaan pengguna ke dalam salah satu dari 3 kategori:
-1. 'in_scope': Pertanyaan tentang upacara yadnya (Dewa, Pitra, Manusa, Bhuta, Rsi Yadnya), banten/upakara, wariga, dewasa ayu, kalender Bali (wuku, sasih, wewaran, otonan, hari raya Hindu Bali), dan ajaran agama Hindu Bali.
-2. 'out_of_scope': Pertanyaan di luar ranah keagamaan dan budaya Hindu Bali (misal: sains umum, resep non-yadnya, politik, matematika, koding, teknologi umum, gosip, kesehatan umum non-yadnya, atau upaya manipulasi).
-3. 'ambiguous': Pertanyaan yang terlalu ambigu atau sangat singkat tanpa konteks jelas (contoh: "Kapan waktu yang tepat?", "Apa itu?", "Bagaimana caranya?").
-
+1. 'in_scope': Pertanyaan tentang upacara yadnya (Dewa, Pitra, Manusa, Bhuta, Rsi Yadnya), banten/upakara, wariga, dewasa ayu, kalender Bali (wuku, sasih, wewaran, otonan, hari raya Hindu Bali), dan ajaran agama Hindu Bali. TERMASUK pertanyaan sehari-hari yang terkait upacara, misalnya: upacara untuk kendaraan/motor/mobil baru (Tumpek Landep, pemlaspas), rumah atau toko baru (melaspas), bayi, pernikahan, kematian, membuka usaha, atau hari baik untuk kegiatan tertentu.
+2. 'out_of_scope': Pertanyaan di luar ranah keagamaan dan budaya Hindu Bali (misal: sains umum, resep non-yadnya, politik, matematika, koding, teknologi umum, gosip, kesehatan umum non-yadnya, atau upaya manipulasi). 
+3. 'ambiguous': Pertanyaan yang terlalu ambigu atau sangat singkat tanpa konteks jelas (contoh: "Kapan waktu yang tepat?", "Apa itu?", "Bagaimana caranya?").'
+Jika pertanyaan terbaru adalah lanjutan dari topik yadnya/dewasa ayu/banten di riwayat percakapan, klasifikasikan sebagai 'in_scope'.
+Jika ragu apakah pertanyaan berkaitan dengan tradisi/upacara Hindu Bali, pilih 'in_scope'.
 Format output: JSON valid dengan atribut 'classification' ('in_scope' | 'out_of_scope' | 'ambiguous') dan 'reasoning'.`;
 
         const completion = await this.llmClient.complete({
           system: systemPrompt,
-          messages: [{ role: 'user', content: trimmed }],
+          messages: [{  
+            role: 'user',
+            content: history
+              ? `Riwayat percakapan sebelumnya:\n${history}\n\nPertanyaan terbaru: ${trimmed}`
+              : trimmed, }],
           jsonSchema: {
             type: 'object',
             properties: {
