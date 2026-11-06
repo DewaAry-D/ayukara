@@ -1,7 +1,7 @@
 # AGENTS.md — Ayukara
 
 Panduan untuk agen AI (Claude Code, Codex, Cursor, dll.) dan kontributor yang bekerja di repo ini.
-Sumber kebenaran produk: `PRD_Ayukara.md` (Draft v0.1). Kalau file ini dan PRD berbeda, **PRD menang**, lalu perbarui file ini.
+Sumber kebenaran produk: `PRD_Ayukara.md` (Draft v0.1, revisi 4 Nov 2026: Perencana kini 3 tab). Kalau file ini dan PRD berbeda, **PRD menang**, lalu perbarui file ini.
 
 ---
 
@@ -9,13 +9,20 @@ Sumber kebenaran produk: `PRD_Ayukara.md` (Draft v0.1). Kalau file ini dan PRD b
 
 **Ayukara** adalah aplikasi web pendamping perencanaan upacara yadnya Hindu Bali.
 
-Alur Perencana: pengguna memilih **upacara + rentang tanggal + tingkatan (nista/madya/utama)**, lalu sistem:
+`/planner` punya **3 tab** yang berujung ke satu halaman hasil `/planner/result` dengan format identik:
 
-1. mengonversi tiap tanggal ke kalender Bali (`balinese-date-js-lib`),
-2. menyaring dewasa ayu/ala lewat **WarigaRuleEngine**,
-3. menyusun banten lewat **BantenResolver** (DB dulu, fallback web + LLM yang wajib berkutipan),
-4. memperkirakan biaya (LLM mencari rentang harga, **total dijumlah di kode**),
-5. menampilkan ringkasan LLM beserta sumber, plus Ekspor PDF.
+| Tab | Input | Bagian tanggal pada hasil |
+|---|---|---|
+| **Cari Hari Baik** | nama/deskripsi upacara (maks. 300 karakter) → pilih upacara → rentang Dari–Sampai → tingkatan | rekomendasi dewasa ayu ("Paling disarankan" / "Alternatif") |
+| **Otonan** | nama (opsional) + tanggal lahir → weton, wuku, 3 otonan terdekat → pilih satu + tingkatan | tanggal otonan + weton + wuku |
+| **Hari Raya** | pilih kartu hari raya (8/halaman, cari, pilih tahun) | tanggal "Hari raya berikutnya" + penjelasan penentuan |
+
+Setelah bagian tanggal, ketiganya berbagi langkah yang sama:
+
+1. mengonversi tanggal ke kalender Bali (`balinese-date-js-lib`); hanya tab Cari Hari Baik yang menyaring dewasa ayu/ala lewat **WarigaRuleEngine**,
+2. menyusun banten lewat **BantenResolver** (DB dulu, fallback web + LLM yang wajib berkutipan),
+3. memperkirakan biaya (LLM mencari rentang harga, **total dijumlah di kode**),
+4. menampilkan ringkasan LLM beserta sumber, plus Ekspor PDF.
 
 Fitur kedua: **Chat AI** yang dibatasi topik (upacara, banten, wariga, dewasa ayu, agama Hindu Bali, upakara).
 
@@ -36,12 +43,16 @@ Ini adalah domain budaya/keagamaan. Kesalahan fakta bukan sekadar bug.
 7. **Whitelist domain** (`sumber.domain_diizinkan`) dikirim ke provider search **dan dicek ulang di kode** (hostname).
 8. **Jangan isi aturan wariga/hari raya dari tebakan atau pengetahuan model.** Placeholder wajib:
    `// TODO: Nilai aturan akan diisi dengan data tervalidasi dari Cultural Lead`
-9. **Konten contoh di Figma V2 bukan data.** Jangan dijadikan seed/fixture produksi: tanggal, harga Rp, "Lontar Wariga Dewasa hlm. 12", "Upadesa tentang Manusa Yadnya", daftar banten per tingkatan.
+9. **Konten contoh di Figma V2 dan screenshot tab Perencana bukan data** (termasuk caption, tanggal, dan aturan di kartu Hari Raya/Otonan). Jangan dijadikan seed/fixture produksi: tanggal, harga Rp, "Lontar Wariga Dewasa hlm. 12", "Upadesa tentang Manusa Yadnya", daftar banten per tingkatan.
 10. **Nama banten persis sesuai sumber.** Variasi ejaan hanya lewat `banten.nama_alias`.
 11. **Tidak ada input daerah dari pengguna.** Tabel `daerah` tetap ada tapi tidak diekspos di UI.
 12. **Tidak ada harga di database.** Harga hanya di cache Upstash Redis.
 13. **Percakapan chat tidak disimpan.**
 14. **Kunci API hanya di server.** Jangan pernah kirim ke klien / commit ke repo.
+15. **`UpacaraMatcher`: LLM hanya memilih dari daftar tertutup `upacara` di DB.** Kandidat dikirim sebagai daftar tertutup, ID keluaran **divalidasi di kode** (ID di luar daftar ditolak). Tidak ada yang cocok → "Upacara tidak ditemukan". Pengguna tetap harus menekan "Pilih" (konfirmasi).
+16. **Tab Otonan dan Hari Raya tidak mengevaluasi dewasa.** Nama pada tab Otonan hanya untuk tampilan/PDF dan **tidak disimpan**.
+17. **Caption dan aturan penentuan hari raya berasal dari DB** (`hari_raya_aturan`, hanya yang tervalidasi Cultural Lead). Tidak di-hardcode di kode/UI. Aturan kosong → "Aturan penentuan belum tersedia".
+18. **Input upacara maks. 300 karakter**, divalidasi di klien **dan** server.
 
 ---
 
@@ -90,8 +101,9 @@ ayukara/
    └─ lib/                     # LOGIKA DOMAIN & INFRA: tanpa dependensi Next.js
       ├─ config/warigaRules.draft.json
       ├─ calendar/{CalendarAdapter,types}.ts
-      ├─ engine/{evaluators,WarigaRuleEngine,HariRayaResolver}.ts
+      ├─ engine/{evaluators,WarigaRuleEngine,HariRayaResolver,OtonanCalculator}.ts   # OtonanCalculator = TAMBAHAN
       ├─ banten/{BantenResolver,QuoteVerifier}.ts
+      ├─ upacara/UpacaraMatcher.ts   # TAMBAHAN (FR-P1a)
       ├─ pricing/PriceEstimator.ts
       ├─ summary/SummaryWriter.ts
       ├─ chat/{TopicGuard,ChatService}.ts
@@ -103,7 +115,7 @@ ayukara/
       │  ├─ index.ts (singleton Sequelize) · config.js (untuk sequelize-cli)
       │  ├─ repositories/{RuleRepository,BantenRepository}.ts
       │  ├─ models/ (22 model + index.ts untuk asosiasi)
-      │  ├─ migrations/{01-initial-ddl-banten-wariga,02-add-hari-raya-tetap}.js
+      │  ├─ migrations/01-initial-ddl-banten-wariga.js   # 22 tabel (sudah termasuk jenis_penentuan & hari_raya_aturan)
       │  └─ seeders/{01-seed-banten,02-seed-wariga}.js
       └─ __tests__/*.test.ts
 ```
@@ -114,6 +126,14 @@ ayukara/
 - `src/features/**` dan `src/app/**` boleh mengimpor `@/lib/**`; `src/components/**` tidak mengimpor `@/lib/**` kecuali tipe.
 - Route Handlers dan Server Actions hanya **merakit** dependensi (`createLlmClient`, `createSearchClient`, repository, cache) lalu memanggil modul domain. Tidak ada logika budaya di dalam `route.ts` atau `actions.ts`.
 - Modul domain tidak mengimpor model Sequelize langsung; lewat `RuleRepository` / `BantenRepository`.
+
+**Perubahan struktur akibat PRD revisi 4 Nov 2026 (3 tab Perencana):**
+
+- **Hapus rencana `migrations/02-add-hari-raya-tetap.js`.** `upacara.jenis_penentuan` dan tabel `hari_raya_aturan` sudah ada di `ddl_banten_wariga.sql` (22 tabel), jadi ikut migrasi `01`.
+- **Modul domain baru:** `src/lib/upacara/UpacaraMatcher.ts` dan `src/lib/engine/OtonanCalculator.ts` (keduanya menerima `CalendarAdapter` / `LlmClient` / repository lewat DI; tetap tanpa dependensi Next.js).
+- **Komponen tab di `src/features/planner/components/`** (menggantikan satu `PlannerForm` tunggal): `PlannerTabs`, tab Cari Hari Baik (`UpacaraSearchBox`, `UpacaraCandidateList`, form rentang + `TingkatanCards`), tab Otonan (`OtonanForm`, `OtonanCards`), tab Hari Raya (`HariRayaGrid`, `HariRayaDetail`), dan satu `DateSection` bervarian tiga untuk halaman hasil (FR-P13). Nama berkas hanya saran; sesuaikan.
+- **Pencocokan upacara** lewat Server Action di `features/planner/actions.ts` (PRD menyebut Server Actions untuk form Perencana; PRD tidak menetapkan endpoint khusus, jadi konfirmasi bila ingin `route.ts` tersendiri).
+- Tes baru: `OtonanCalculator.test.ts`, `UpacaraMatcher.test.ts` di `src/lib/__tests__/`.
 
 **Hal yang belum ada di struktur dan perlu ditambahkan:**
 
@@ -154,7 +174,9 @@ Prinsip: **separation of concerns, dependency injection, fungsi evaluator murni.
 | `CalendarAdapter` | Bungkus `balinese-date-js-lib`; petakan ke ID `wewaran_nilai`, `wuku`, `sasih`, penanggal/pangelong, purnama/tilem | mock library |
 | `WarigaRuleEngine` | Evaluasi murni atas aturan terinjeksi: `evaluate(date)`, `evaluateAll(range)`, `filter(range, upacara)` | fixture aturan |
 | evaluator `checkList`, `checkKombinasi` | Fungsi murni | unit |
-| `HariRayaResolver` | Kemunculan terdekat hari raya tetap dari `hari_raya_aturan` | fixture kalender |
+| `HariRayaResolver` | "Hari raya berikutnya" (tahun yang dipilih/terdekat) dari `hari_raya_aturan` + penjelasan penentuan; menerima `CalendarAdapter` & repository lewat DI | fixture kalender + aturan |
+| `OtonanCalculator` | Weton (saptawara + pancawara), wuku, dan 3 otonan terdekat (siklus 210 hari) dari tanggal lahir; label "Terdekat" / "otonan ke-n" | fixture kalender |
+| `UpacaraMatcher` | Nama → cocok persis/normalisasi di DB; deskripsi → LLM memilih dari daftar tertutup DB, ID divalidasi | mock LLM + fixture |
 | `RuleRepository` / `BantenRepository` | Baca aturan/set banten dari DB | PGlite |
 | `BantenResolver` | DB → (fallback) search whitelist → LLM ekstraksi → QuoteVerifier → simpan `unverified` → atau "tidak ditemukan" | mock semua |
 | `QuoteVerifier` | Cocokkan kutipan persis (normalisasi spasi) | unit murni |
@@ -190,9 +212,28 @@ Guardrail dan validasi JSON schema berada **di luar** adapter agar perilaku sama
 - Konfigurasi engine: mode "hanya `verified`" untuk produksi (keputusan tampilkan unverified dengan label masih TODO).
 - Ranking "Paling disarankan" / "Alternatif": TODO persetujuan Cultural Lead. Jangan menciptakan aturan ranking sendiri tanpa menandainya TODO.
 
-### Alur hari raya tetap (FR-P1b)
+### Tiga tab Perencana (FR-P1, P1a–P1d, P13)
 
-Jika `upacara.jenis_penentuan = 'hari_raya_tetap'`: **jangan evaluasi dewasa.** Kembalikan kemunculan terdekat (dalam rentang, atau terdekat sebelum/sesudah) via `HariRayaResolver`. Aturan kosong → "Aturan penentuan belum tersedia". Jangan menebak.
+**Cari Hari Baik**
+1. Input teks maks. 300 karakter + tombol "Cari upacara yang sesuai".
+2. `UpacaraMatcher`: (a) cocok persis/normalisasi dengan `upacara.nama` atau alias → teks inline "upacara sesuai", tanpa daftar; (b) deskripsi → LLM memilih dari daftar tertutup → "Upacara Teridentifikasi" (teratas berlabel "Paling sesuai", sisanya tombol "Pilih"); (c) tidak ada yang cocok → "Upacara tidak ditemukan"; boleh menyarankan pindah ke tab Otonan/Hari Raya bila deskripsi lebih cocok.
+3. Setelah "Pilih" tombol menjadi "Terpilih" dan halaman auto-scroll ke Dari–Sampai (+ chip Bulan ini / 3 bulan ke depan / Tahun ini / Tahun depan), lalu tingkatan Nista/Madya/Utama, lalu "Lihat Rekomendasi".
+4. Setiap hari dalam rentang dievaluasi `WarigaRuleEngine` (semantik §6).
+5. Belum diputuskan (⛔): apakah kandidat hanya upacara ber-`jenis_penentuan='dewasa'` atau semua, dan apa yang terjadi bila pengguna memilih upacara bertipe `hari_raya_tetap`/`otonan` di tab ini. Buat sebagai parameter yang mudah diganti.
+
+**Otonan**
+1. Nama (opsional) + tanggal lahir; setelah menekan OK di kalender, `OtonanCalculator` menampilkan weton, wuku, dan 3 otonan terdekat (siklus 210 hari), yang terdekat berlabel "Terdekat", masing-masing "otonan ke-n".
+2. Pengguna memilih satu tanggal, tingkatan, lalu "Lihat Kebutuhan Banten". **Tanpa evaluasi dewasa.**
+3. Acuan "otonan ke-n" (dihitung dari kelahiran) dan tanggal acuan "terdekat" menunggu Cultural Lead (⛔). Jadikan tanggal acuan parameter injeksi; jangan mengasumsikan.
+4. Upacara untuk banten dipilih lewat `jenis_penentuan='otonan'` (bukan hard-code ID).
+
+**Hari Raya**
+1. Grid kartu dari `upacara` dengan `jenis_penentuan='hari_raya_tetap'`: 8 per halaman, kotak pencarian, pagination, chip tahun.
+2. Klik kartu → `HariRayaResolver` → "Hari raya berikutnya: <tanggal>" + `penjelasan_penentuan`. Aturan kosong/belum verified → "Aturan penentuan belum tersedia". Jangan menebak.
+3. Hari raya berbasis sasih (mis. Nyepi, Siwaratri) bergantung pada akurasi sasih/penanggal-pangelong library → verifikasi dengan fixture tervalidasi (⛔).
+4. **Tidak ada pemilih tingkatan di tab ini.** Cara menentukan tingkatan untuk banten (default, semua tingkatan, atau tambah pemilih) belum diputuskan (⛔); jangan memilih sendiri.
+
+**Halaman hasil seragam (FR-P13):** `/planner/result` memakai komponen yang sama untuk ketiga tab. Hanya bagian tanggal yang bervarian; banten, harga, ringkasan, dan PDF identik.
 
 ### Estimasi harga
 
@@ -211,28 +252,31 @@ Jika `upacara.jenis_penentuan = 'hari_raya_tetap'`: **jangan evaluasi dewasa.** 
 
 - **PK `INT` diisi eksplisit.** Jangan pakai `SERIAL`/`autoIncrement`. Seed memakai ID tetap, jadi tentukan strategi ID untuk baris baru yang dibuat runtime (mis. `MAX(id)+1` dalam transaksi, atau sequence manual) dan catat keputusannya.
 - Migrasi diturunkan dari `ddl_banten_wariga.sql`: **pertahankan semua CHECK, UNIQUE, index** (termasuk `uq_banten_set` dengan `COALESCE(daerah_id,0)` dan `COALESCE(rangkaian_id,0)`, yang perlu SQL mentah di migrasi).
-- Model Sequelize di `src/lib/db/models/` (22 model: 21 tabel DDL + `HariRayaAturan`); domain hanya lewat repository. Konfigurasi CLI di `src/lib/db/config.js` + `.sequelizerc`; koneksi runtime di `src/lib/db/index.ts`.
+- Model Sequelize di `src/lib/db/models/` (22 model, satu per tabel DDL); domain hanya lewat repository. Konfigurasi CLI di `src/lib/db/config.js` + `.sequelizerc`; koneksi runtime di `src/lib/db/index.ts`.
 - Koneksi: connection string **pooled** Neon (`DATABASE_URL`), instance Sequelize **di-cache di scope modul**, `pool.max` kecil, idle timeout pendek (nilai final TODO setelah uji beban).
 - Handler yang memakai DB wajib `export const runtime = 'nodejs'` (bukan Edge).
-- 21 tabel: lihat PRD §8. `banten_set_item.kutipan_id` dan `aturan_dewasa_upacara.kutipan_id` **NOT NULL**: tidak boleh ada data tanpa bukti.
+- 22 tabel: lihat PRD §8. `banten_set_item.kutipan_id` dan `aturan_dewasa_upacara.kutipan_id` **NOT NULL**: tidak boleh ada data tanpa bukti.
 
-### Perubahan DDL PENDING (migrasi terpisah, jangan digabung ke migrasi awal)
+### Skema penentuan tanggal (SUDAH ada di `ddl_banten_wariga.sql`)
 
-- `upacara.jenis_penentuan VARCHAR(20) NOT NULL DEFAULT 'dewasa' CHECK (IN ('dewasa','hari_raya_tetap'))`
-- Tabel baru `hari_raya_aturan` (meniru `dewasa_syarat`, plus `upacara_id`, `kutipan_id` nullable, `status`, `catatan`, CHECK `num_nonnulls(...) >= 1`).
-- **Isi baris `hari_raya_aturan` = TODO Cultural Lead. Jangan di-seed dari tebakan.**
-- Setelah disetujui: perbarui ERD draw.io dan `ddl_banten_wariga.sql`.
+Berkas DDL terbaru (22 tabel) sudah memuat dua hal berikut, jadi keduanya ikut **migrasi awal** (tidak ada migrasi terpisah):
+
+- `upacara.jenis_penentuan VARCHAR(20) NOT NULL DEFAULT 'dewasa' CHECK (IN ('dewasa','hari_raya_tetap','otonan'))`. Pemetaan: `dewasa` → tab Cari Hari Baik, `hari_raya_tetap` → tab Hari Raya, `otonan` → tab Otonan.
+- `hari_raya_aturan`: `id`, `upacara_id` (FK, ON DELETE CASCADE), `grup`, `wewaran_nilai_id`, `wuku_id`, `sasih_id`, `penanggal`, `pangelong`, `is_purnama`, `is_tilem` (CHECK `num_nonnulls = 1`, sama seperti `dewasa_syarat`; DAN dalam grup, ATAU antar-grup), `penjelasan_penentuan`, `kutipan_id` (nullable), `status` (**hanya** `'unverified'`/`'verified'`, default `'unverified'`); index `(upacara_id, grup)` dan `(upacara_id, status)`. Tidak ada kolom `catatan`.
+- **Isi `hari_raya_aturan` saat ini 0 baris. Itu sengaja.** Mengisinya = TODO Cultural Lead; jangan di-seed dari tebakan. Konsekuensinya semua kartu Hari Raya menampilkan "Aturan penentuan belum tersedia" sampai data masuk.
+- Evaluator `checkList`/`checkKombinasi` dapat dipakai ulang untuk `hari_raya_aturan` karena strukturnya sama.
 
 ### Seed: jebakan yang sudah diketahui
 
 | Hal | Detail |
 |---|---|
-| `seed_banten.sql` masih berisi **blok DDL lama** (baris ±1–61: `DROP TABLE ... CASCADE` + `CREATE TABLE` tanpa sebagian CHECK/index) sebelum `BEGIN;` | **Jangan dijalankan apa adanya setelah migrasi**; akan menghapus skema yang benar. Pisahkan hanya bagian `BEGIN; INSERT ... COMMIT;` ke seeder (Fase 1). |
+| `seed_banten.sql` versi terbaru | **Hanya `BEGIN; INSERT ...; COMMIT;`, tanpa DDL** (jalankan setelah migrasi). Versi lama berisi `DROP TABLE ... CASCADE` + `CREATE TABLE`: **jangan dipakai.** Tambahkan tes yang memastikan berkas seed tidak mengandung `DROP`/`CREATE`/`ALTER`. |
+| `jenis_penentuan` di seed banten | Seed sudah mengisi: `hari_raya_tetap` untuk id 1–8 (Kajeng Kliwon, Purnama/Tilem, Galungan, Kuningan, Saraswati, Pagerwesi, Siwaratri, Nyepi/Tahun Baru Saka), `otonan` untuk id 23 (Otonan Bayi Umur 6 Bulan), `dewasa` untuk 19 sisanya. **PRD menulis "semua 28 masih default dewasa" dan menandai pemetaan sebagai TODO Cultural Lead**, jadi perlakukan nilai seed sebagai **sementara/belum tervalidasi** (⛔). Jangan ubah tanpa persetujuan. |
 | Urutan seed | **banten dulu, baru wariga.** `aturan_dewasa_upacara` di seed_wariga merujuk `kategori_yadnya` dari seed_banten. |
 | ID | Tidak bentrok: banten memakai `sumber` 1 & `kutipan` 1–172; wariga memakai `sumber` 2 & `kutipan` 1001–1220. Pertahankan rentang ini. |
 | `asal` | DDL membatasi `banten_set.asal IN ('manual','internet')`, sedangkan PRD §11 menulis `manual\|llm`. **Pakai `'internet'` untuk hasil fallback web+LLM** sampai keputusan disahkan; jangan ubah CHECK tanpa persetujuan. |
 | Wewaran/wuku/sasih | Master diisi urutan kalender standar, **perlu dicek Cultural Lead**. Cek juga ejaan (mis. `Keliwon` di seed vs keluaran library) saat membuat mapping di `CalendarAdapter`. |
-| Isi seed | banten: 4 kategori, 28 upacara, 22 rangkaian, 4 tingkatan, 53 lokasi, 126 banten, 172 kutipan, 50 set, 822 item. Wariga: 220 dewasa (127 ayu / 48 ala / 45 tanpa sifat), 2.520 syarat, 40 aturan. Semua **unverified**. |
+| Isi seed | banten: 4 kategori, 28 upacara, 22 rangkaian, 4 tingkatan, 53 lokasi, 126 banten, 172 kutipan, 50 set, 822 item. Wariga: 220 dewasa (127 ayu / 48 ala / 45 tanpa sifat), 2.520 syarat, 40 aturan (`seed_wariga.sql` tidak berubah dari versi sebelumnya). `hari_raya_aturan`: 0 baris. Semua **unverified**. |
 
 Keputusan penamaan yang sudah disepakati (jangan diubah sepihak):
 "Sodan/Rayunan/Ajuman" = satu banten (Soda/Dodan = salah tulis); "Ajuman" berdiri sendiri tetap terpisah; Suci Sari/Alit, Suci Laksana, Suci dicatat terpisah; Otonan memakai bentuk garis miring.
@@ -259,7 +303,9 @@ Keputusan penamaan yang sudah disepakati (jangan diubah sepihak):
 - Tidak ada panggilan jaringan di test: pakai `MockLlmClient`, `MockSearchClient`, `InMemoryPriceCache`.
 - Wajib ada test untuk:
   - `checkList`, `checkKombinasi`, grup DAN/ATAU, prioritas wewaran<wuku<sasih
-  - `HariRayaResolver`: dalam rentang, di luar rentang, aturan kosong
+  - `HariRayaResolver`: tahun dipilih, tahun terdekat, aturan kosong/unverified → "Aturan penentuan belum tersedia"
+  - `OtonanCalculator`: weton & wuku dari fixture; 3 kemunculan berjarak 210 hari; label "Terdekat" / "otonan ke-n"
+  - `UpacaraMatcher`: nama valid (inline), deskripsi → daftar, **ID di luar DB ditolak**, tidak ditemukan, batas 300 karakter, injection di teks deskripsi
   - `QuoteVerifier`: cocok, tidak cocok, beda spasi
   - `PriceEstimator`: penjumlahan, item tanpa harga, cache hit/miss, kedaluwarsa akhir hari WITA, Redis down
   - `SearchClient` wrapper: domain di luar whitelist dibuang walau dikembalikan provider; hasil kosong
@@ -277,13 +323,13 @@ Keputusan penamaan yang sudah disepakati (jangan diubah sepihak):
 **Boleh tanpa bertanya:** menulis kode/test di `src/lib/`, `src/app/`, `src/features/`, `src/components/`, `src/lib/__tests__/`; membuat migrasi dari DDL yang ada; membuat mock/fixture struktural.
 
 **Tanya dulu:**
-- mengubah DDL/CHECK yang sudah ada, atau menerapkan perubahan DDL pending
+- mengubah DDL/CHECK yang sudah ada, mengubah nilai `jenis_penentuan` di seed, atau mengisi `hari_raya_aturan`
 - menambah/menghapus domain di whitelist
 - memilih library PDF, provider search/LLM final, nilai `pool.max` / `maxDuration`
 - mengubah aturan ranking, aturan hari raya, atau status data menjadi `verified`
 - menambah dependensi besar
 
-**Jangan pernah:** mengisi data budaya dari pengetahuan sendiri; menandai data `verified` lewat kode non-validator; menyimpan harga di DB; mengekspos kunci API; menyimpan riwayat chat; menjalankan `seed_banten.sql` mentah pada DB yang sudah termigrasi; memakai konten mockup Figma sebagai data.
+**Jangan pernah:** mengisi data budaya dari pengetahuan sendiri; menandai data `verified` lewat kode non-validator; menyimpan harga di DB; mengekspos kunci API; menyimpan riwayat chat; menjalankan seed versi lama yang berisi DDL (`DROP TABLE`/`CREATE TABLE`) pada DB yang sudah termigrasi; memakai konten mockup Figma sebagai data.
 
 ---
 
@@ -316,12 +362,13 @@ Fase 5 dapat dimulai paralel dengan kontrak/stub setelah Fase 2 menetapkan tipe 
 
 ### Fase 1 — Data (M1)
 **Tujuan:** skema + seed bersih, dapat diulang.
-- Verifikasi `.sequelizerc` & `src/lib/db/config.js`; isi `migrations/01-initial-ddl-banten-wariga.js` dari `ddl_banten_wariga.sql` (21 tabel, semua CHECK/index/PK INT eksplisit; `uq_banten_set` lewat SQL mentah).
+- Verifikasi `.sequelizerc` & `src/lib/db/config.js`; isi `migrations/01-initial-ddl-banten-wariga.js` dari `ddl_banten_wariga.sql` (22 tabel, **termasuk** `jenis_penentuan` dan `hari_raya_aturan`; semua CHECK/index/PK INT eksplisit; `uq_banten_set` lewat SQL mentah).
 - Model Sequelize di `src/lib/db/models/` + asosiasi di `models/index.ts`.
-- Bersihkan `seed_banten.sql`: buang blok DDL lama; jalankan hanya bagian `BEGIN; INSERT ... COMMIT;` lewat `seeders/01-seed-banten.js`.
+- `seeders/01-seed-banten.js` menjalankan `seed_banten.sql` terbaru (INSERT-only). Pastikan berkas yang dipakai **bukan** versi lama yang berisi DDL; tes penjaga: tidak ada `DROP`/`CREATE`/`ALTER` di berkas seed.
 - `seeders/02-seed-wariga.js` dari `seed_wariga.sql` (harus setelah 01).
 - Tes `src/lib/__tests__/db-seed.test.ts` (PGlite).
-- Tes DB (PGlite): migrasi + dua seed lolos; cek hitungan baris (lihat §7) dan FK/CHECK.
+- Tes DB (PGlite): migrasi + dua seed lolos; cek hitungan baris (lihat §7), FK/CHECK, `jenis_penentuan` (8 `hari_raya_tetap`, 1 `otonan`, 19 `dewasa`), dan `hari_raya_aturan` = 0 baris.
+- Catat bahwa pemetaan `jenis_penentuan` di seed sementara (⛔ Cultural Lead).
 - Review alias (⛔ Cultural Lead): Pejati←Jauman; Pembersihan←Pebersihan/Pengerisikan; Tumpeng 21←Selikur; Tumpeng 17←Pitulas; Sayut X→Sesayut X; Pulagembal/Mapulagembal; Pemogpog/Pemopog; "Sodan/Rayunan(kuning)/Ajuman" (hlm. 121).
 - Perbaiki kutipan Otonan yang masih berbentuk koma dari text layer PDF (⛔ konfirmasi bentuk yang benar).
 - Putuskan strategi ID untuk insert runtime (hasil fallback LLM).
@@ -329,21 +376,24 @@ Fase 5 dapat dimulai paralel dengan kontrak/stub setelah Fase 2 menetapkan tipe 
 
 **DoD:** `db:migrate && db:seed` pada DB kosong berhasil dan idempoten (atau reset terdokumentasi); test DB hijau; daftar isu terbuka tercatat di `docs/`.
 
-### Fase 2 — Engine Wariga & Kalender (M2)
+### Fase 2 — Engine Wariga, Kalender, Otonan, Hari Raya, Matcher (M2)
 **Tujuan:** dari tanggal → dewasa ayu/ala, murni dan teruji.
-- Migrasi `02-add-hari-raya-tetap.js` (`jenis_penentuan`, tabel `hari_raya_aturan`) + model `HariRayaAturan.ts` dan kolom `jenis_penentuan` di `Upacara.ts`, setelah persetujuan (⛔); perbarui ERD & file DDL.
+- Pastikan model `HariRayaAturan.ts` dan kolom `jenis_penentuan` di `Upacara.ts` sesuai DDL (tidak ada migrasi terpisah). Perbarui ERD draw.io bila belum (PNG terbaru di Drive, lihat PRD §8).
+- Interface `LlmClient` + `MockLlmClient` dibuat di sini (dipindah lebih awal dari Fase 3) karena dibutuhkan `UpacaraMatcher`.
 - `src/lib/calendar/CalendarAdapter.ts` + `types.ts`, dengan mock library; mapping ke ID `wewaran_nilai`/`wuku`/`sasih` (termasuk astawara "Brahma" dan konsistensi ejaan); penanggal/pangelong; purnama/tilem.
 - `src/lib/engine/evaluators.ts` (`checkList`, `checkKombinasi`) dan `WarigaRuleEngine.ts` (`evaluate`, `evaluateAll`, `filter`) dengan aturan diinjeksi.
 - `RuleRepository` (DB; JSON `src/lib/config/warigaRules.draft.json` hanya sebagai draf) dengan mode "hanya verified".
 - Hierarki prioritas wewaran<wuku<sasih; penanganan status `konflik`.
-- `src/lib/engine/HariRayaResolver.ts` (aturan kosong → "Aturan penentuan belum tersedia").
+- `src/lib/engine/HariRayaResolver.ts`: "Hari raya berikutnya" + `penjelasan_penentuan`; aturan kosong/unverified → "Aturan penentuan belum tersedia"; `CalendarAdapter` dan repository diinjeksi.
+- `src/lib/engine/OtonanCalculator.ts`: weton, wuku, 3 otonan (210 hari); tanggal acuan sebagai parameter (⛔ konfirmasi "otonan ke-n").
+- `src/lib/upacara/UpacaraMatcher.ts`: nama → DB; deskripsi → LLM dengan daftar tertutup, ID divalidasi (aturan mutlak #15).
 - Ranking "Paling disarankan/Alternatif": implementasi sebagai strategi yang dapat diganti; aturan final ⛔.
 - Fixture kalender: struktur siap, nilai harapan ⛔ Cultural Lead.
 - Sisa aturan di `warigaRules.draft.json` (belum ada sasih & pancawara, ada KONFLIK) tidak dimasukkan sebelum diputuskan ⛔.
 
-- Tes: `evaluators.test.ts`, `WarigaRuleEngine.test.ts`, `HariRayaResolver.test.ts`; tambah `CalendarAdapter.test.ts`.
+- Tes: `evaluators.test.ts`, `WarigaRuleEngine.test.ts`, `HariRayaResolver.test.ts`; tambah `CalendarAdapter.test.ts`, `OtonanCalculator.test.ts`, `UpacaraMatcher.test.ts`.
 
-**DoD:** semua unit test §9 untuk modul ini hijau; engine tidak mengimpor Next/DB/SDK langsung; `/api/plan` (stub tanpa banten) mengembalikan dewasa per tanggal.
+**DoD:** semua unit test §9 untuk modul ini hijau; engine tidak mengimpor Next/DB/SDK langsung; `/api/plan` (stub tanpa banten) mengembalikan bagian tanggal untuk ketiga jalur (dewasa / otonan / hari raya).
 
 ### Fase 3 — BantenResolver (M3)
 **Tujuan:** set banten berkutipan, tanpa halusinasi.
@@ -368,18 +418,23 @@ Fase 5 dapat dimulai paralel dengan kontrak/stub setelah Fase 2 menetapkan tipe 
 **DoD:** test harga (jumlah, tanpa harga, cache, kedaluwarsa, Redis down) hijau; ringkasan lolos cek "tidak ada fakta baru"; waktu pengambilan WITA tersedia di respons.
 
 ### Fase 5 — UI V2 & Ekspor PDF (M5)
-**Tujuan:** layar sesuai Figma `YGkeK7kZ3UUggpeLQO3uLl`, page V2 (`5:2`).
+**Tujuan:** layar sesuai Figma `YGkeK7kZ3UUggpeLQO3uLl` (page V2 `5:2`) dan desain terbaru 3 tab Perencana.
+- **Catatan desain:** frame lama Perencana (`5:85`, "Langkah 1 dari 2") **digantikan** oleh 3 tab. Tab dibangun dari screenshot pengguna (4 Nov 2026); **ID node Figma tab belum dipetakan (TODO sinkronkan)**. Semua isi contoh di mockup (caption, tanggal, aturan) bukan data.
 - Layout: `src/app/layout.tsx` + `components/layout/{Navbar,Footer}.tsx` (footer "© 2026 Ayukara · Bali DigiFest 2026").
-- Beranda `src/app/page.tsx` (5:3): hero (`public/images/hero-pawiwahan.jpg` placeholder), "Cara Kerja" 3 langkah.
-- Perencana `src/app/planner/page.tsx` (5:85): `features/planner/components/PlannerForm.tsx` (jenis upacara, Dari/Sampai, chip "Bulan ini / 3 bulan ke depan / Tahun ini / Tahun depan", Reset, Lihat Rekomendasi) dan `TingkatanCards.tsx` (catatan "skala pelaksanaan, bukan kualitas spiritual"); submit lewat `features/planner/actions.ts`.
-- Hasil `src/app/planner/result/page.tsx` (6:2): `DewasaAyuCard.tsx` (Paling disarankan/Alternatif, alasan wewaran+wuku, sitasi), `BantenTable.tsx` (per rangkaian/lokasi, jumlah, status, rentang harga; state "Harga belum tersedia"/"Data belum tersedia"), `CostSummary.tsx`, `AiSummaryBox.tsx` ([1][2]), `ExportPdfButton.tsx` (Terima rencana, Ekspor PDF).
+- Beranda `src/app/page.tsx` (5:3): hero (`public/images/hero-pawiwahan.jpg` placeholder), "Cara Kerja" 3 langkah (cek apakah teks perlu disesuaikan dengan 3 tab: ⛔ product owner).
+- Perencana `src/app/planner/page.tsx` dengan 3 tab (komponen di `features/planner/components/`):
+  - **Cari Hari Baik:** textarea ≤300 + "Cari upacara yang sesuai"; inline konfirmasi atau daftar "Upacara Teridentifikasi" ("Paling sesuai"/"Pilih" → "Terpilih"); auto-scroll ke Dari–Sampai + chip cepat + `TingkatanCards` (catatan "skala pelaksanaan, bukan kualitas spiritual"); "Lihat Rekomendasi".
+  - **Otonan:** nama (opsional), tanggal lahir (date picker + OK), kartu weton & wuku, 3 kartu otonan ("Terdekat", "otonan ke-n"), tingkatan, "Lihat Kebutuhan Banten". Nama tidak disimpan.
+  - **Hari Raya:** pencarian, chip tahun, grid 8/halaman + pagination, panel "Hari raya berikutnya" + penjelasan penentuan, "Lihat Kebutuhan Banten". **Tanpa pemilih tingkatan** (⛔ keputusan terbuka); caption dari DB.
+  - Pencocokan upacara dan submit lewat Server Actions di `features/planner/actions.ts`.
+- Hasil `src/app/planner/result/page.tsx` (6:2): **komponen sama untuk ketiga tab (FR-P13)**; `DateSection` bervarian: (a) `DewasaAyuCard` (Paling disarankan/Alternatif, alasan, sitasi), (b) otonan terpilih + weton + wuku, (c) tanggal hari raya + penjelasan penentuan. Lalu `BantenTable.tsx` (state "Harga belum tersedia"/"Data belum tersedia"), `CostSummary.tsx`, `AiSummaryBox.tsx` ([1][2]), `ExportPdfButton.tsx` (Terima rencana, Ekspor PDF).
 - Komponen bersama `components/ui/`: `VerificationBadge` (FR-V3; desain sementara, TODO), `CulturalDisclaimer`, `PriceDisclaimer`, `CitationBadge`. Disclaimer wajib tampil di Hasil, Chat, dan PDF.
-- Ekspor PDF (FR-P12): `src/app/api/pdf/route.ts` (Node runtime) memanggil `src/lib/pdf/PdfGenerator.ts` dengan **data terstruktur yang sama** dengan halaman Hasil; 7 bagian (upacara+tingkatan, rentang, dewasa+sumber, banten+status+sumber, harga+URL+tanggal+total, disclaimer, tanggal dokumen). Pilih library PDF (⛔).
-- Orkestrasi `src/app/api/plan/route.ts` merakit: CalendarAdapter → engine/HariRayaResolver → BantenResolver → (harga via `/api/price`) → SummaryWriter.
+- Ekspor PDF (FR-P12): `src/app/api/pdf/route.ts` (Node runtime) memanggil `src/lib/pdf/PdfGenerator.ts` dengan **data terstruktur yang sama** dengan halaman Hasil; 7 bagian: (1) upacara+tingkatan, (2) tanggal/rentang diminta, (3) **bagian tanggal sesuai tab** (dewasa ayu + sumber, **atau** otonan: tanggal, weton, wuku, otonan ke-n, **atau** hari raya + aturan penentuan), (4) banten+status+sumber, (5) harga+URL+tanggal+total, (6) disclaimer, (7) tanggal dokumen. Pilih library PDF (⛔).
+- Orkestrasi `src/app/api/plan/route.ts` merakit: tanggal (engine / `OtonanCalculator` / `HariRayaResolver`, sesuai tab) → BantenResolver → (harga via `/api/price`) → SummaryWriter.
 - State loading/error (belum ada di Figma): sederhana & konsisten, tandai keputusan desain sementara.
 - Bahasa Indonesia; desktop-first, responsif dasar. Aksesibilitas: target WCAG TODO; minimal semantik HTML, kontras, fokus keyboard.
 
-**DoD:** alur Perencana end-to-end berjalan dengan data seed; tidak ada data mockup Figma yang tampil sebagai data nyata; PDF identik isinya dengan halaman Hasil.
+**DoD:** ketiga tab berjalan end-to-end dengan data seed (Hari Raya menampilkan "Aturan penentuan belum tersedia" selama `hari_raya_aturan` kosong); tidak ada data mockup tampil sebagai data nyata; PDF identik isinya dengan halaman Hasil untuk ketiga varian.
 
 ### Fase 6 — Chat AI (M6)
 **Tujuan:** chat berbatas topik, berbasis sumber.
@@ -399,6 +454,7 @@ Fase 5 dapat dimulai paralel dengan kontrak/stub setelah Fase 2 menetapkan tipe 
 - Layar admin/validator memakai `features/validation/components/ValidationTable.tsx` (belum ada di Figma, desain ⛔; route admin belum ada di `src/app/`), dengan autentikasi/otorisasi (TODO: mekanisme).
 - Tampilan kutipan + sumber saat meninjau; antrian hasil fallback LLM.
 - Keputusan produksi: engine hanya `verified` atau tampil unverified berlabel (⛔).
+- `hari_raya_aturan` hanya punya status `unverified`/`verified` dan **belum punya tabel log validasi** (berbeda dari `banten_set` dan `aturan_dewasa_upacara`). Tentukan model validasi + cara Cultural Lead memasukkan aturan (⛔) sebelum membangun UI-nya.
 - Keputusan 45 dewasa tanpa sifat (⛔) dan penyelesaian aturan yang dilewati (§Fase 1).
 - Admin data: pengelolaan seed, sumber, kutipan.
 
@@ -424,7 +480,14 @@ Fase 5 dapat dimulai paralel dengan kontrak/stub setelah Fase 2 menetapkan tipe 
 
 ⛔ Menunggu manusia; agen **tidak boleh memutuskan**:
 
-- Aturan penentuan hari raya tetap (isi `hari_raya_aturan`), aturan ranking tanggal
+- Isi `hari_raya_aturan` (saat ini 0 baris) beserta `penjelasan_penentuan`; aturan ranking tanggal
+- Pemetaan `jenis_penentuan` per upacara (seed sementara: 8 `hari_raya_tetap`, 1 `otonan`, 19 `dewasa`; PRD masih menyebut default `dewasa`). Termasuk: Kajeng Kliwon dan Purnama/Tilem bertipe `hari_raya_tetap` padahal berulang, jadi arti "hari raya berikutnya" perlu dijelaskan
+- Tab Hari Raya tanpa tingkatan: pakai default, tampilkan semua, atau tambah pemilih
+- Otonan: acuan "otonan ke-n", tanggal acuan "3 terdekat", dan apakah banten Otonan (seed: "Bayi Umur 6 Bulan") berlaku untuk semua usia/tingkatan
+- Kandidat `UpacaraMatcher` (semua upacara vs hanya `dewasa`) dan perilaku bila memilih upacara bertipe hari raya/otonan di tab Cari Hari Baik
+- Akurasi sasih `balinese-date-js-lib` untuk Nyepi/Siwaratri (butuh fixture tervalidasi)
+- Model validasi `hari_raya_aturan` (tanpa tabel log, status tanpa `rejected`/`konflik`)
+- Sinkronisasi ID node Figma untuk 3 tab dan teks "Cara Kerja" di Beranda
 - Nilai fixture kalender; validasi master wewaran/wuku/sasih
 - Domain whitelist; keputusan aturan unverified di produksi; label unverified
 - 45 dewasa tanpa sifat; aturan wariga yang dilewati; "Sri" ambigu; konflik di `warigaRules.draft.json`

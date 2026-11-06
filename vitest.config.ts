@@ -5,7 +5,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/lib/__tests__/**/*.test.ts'],
+    include: ['src/**/__tests__/**/*.test.ts'],
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    fileParallelism: false,
   },
   resolve: {
     alias: {
@@ -13,4 +16,3 @@ export default defineConfig({
     },
   },
 });
-

@@ -42,6 +42,16 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    files: ["**/*.js", "**/*.cjs", "src/lib/__tests__/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

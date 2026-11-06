@@ -1,0 +1,56 @@
+-- Update deskripsi upacara yang masih NULL (Ayukara)
+-- TODO: Nilai aturan akan diisi dengan data tervalidasi dari Cultural Lead
+BEGIN;
+-- sumber: parisada.or.id/nyepi-pandemi-sunyi/; buku.txt §g Nyepi/Tahun Baru Saka (hlm.122); doc2/Dewa_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Hari raya Tahun Baru Saka yang jatuh pada penanggal pertama Sasih Kadasa, sehari setelah Tilem Kasanga, dirayakan dengan Catur Brata Penyepian: amati karya (tidak bekerja), amati geni (tidak menyalakan api), amati lelungan (tidak bepergian), dan amati lelanguan (tidak bersenang-senang). Rangkaiannya didahului Upacara Pecaruan Eka Sata. Dikenal juga sebagai Nyepi, Hari Raya Nyepi, atau Tahun Baru Caka.' WHERE id = 8 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.117 (Piodalan = peringatan hari lahir Pura), §h hlm.122-127; doc2/Dewa_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Piodalan, yaitu peringatan hari lahirnya sebuah pura, pada tingkat yang menggunakan banten Suci Sari/Alit (tingkat lebih kecil). Didahului Upacara Pecaruan Eka Sata (Caru Ayam Brumbun) di jaba tengah atau di luar Kori Agung/Candi Bentar. Cocok untuk odalan/piodalan pura atau merajan dengan upakara sederhana.' WHERE id = 9 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.117, §i hlm.127-130; doc2/Dewa_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Piodalan, yaitu peringatan hari lahirnya sebuah pura, pada tingkat yang menggunakan banten Suci Laksana (lebih besar dari Suci Sari/Alit). Didahului Upacara Pecaruan Panca Sata di jaba tengah atau di luar Kori Agung/Candi Bentar, dan di depan Pandita ditambah Sayut Dharma Wiku. Dikenal juga sebagai odalan/piodalan pura tingkat besar.' WHERE id = 10 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.130-131; seed/data.py (Piodalan umum); doc2/Dewa_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Rangkaian awal yang berlaku untuk setiap Piodalan (peringatan hari lahir pura), apa pun tingkatannya: Matur Piuning sebelum upacara dimulai, serta Neteg Karya dan Ngingsah tiga hari sebelumnya (H-3). Dipakai saat persiapan odalan di pura atau merajan.' WHERE id = 11 AND deskripsi IS NULL;
+-- sumber: buku.txt §j hlm.131; bali.kemenag.go.id/denpasar/berita/61645/...; dpdhpibali.org/wp-content/uploads/2019/05/MELASPAS.pdf
+UPDATE upacara SET deskripsi = 'Upacara penyucian bangunan baru atau yang selesai direnovasi, baik tempat suci (pura, merajan) maupun perumahan, sebelum ditempati atau digunakan, agar penghuninya memperoleh keselamatan dan ketenangan. Didahului Nyikut Karang dan Ngeruak Karang, lalu Caru Pemelaspasan (Caru Eka Sata atau Caru Panca Sata), Memakuh, dan Mengurip-urip dengan ulap-ulap dan orti. Cocok untuk rumah baru, kantor, toko, atau pelinggih baru selesai dibangun.' WHERE id = 12 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.135-137 (pengertian a. Ngeringkes); doc2/Pitra_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Upacara Pitra Yadnya untuk merawat jenazah (sawa) orang yang meninggal, mulai dari memandikan, menggulung, dan memberi perlengkapan, sampai jenazah diperabukan (Agni Pralina) atau dikuburkan (Mertiwi). Dilakukan saat ada anggota keluarga yang meninggal dunia; disebut juga Atiwa-tiwa.' WHERE id = 13 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.138 (d. Ngelungah); doc2/Pitra_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Upacara pengabenan untuk jenazah berupa janin yang sudah sempurna atau anak yang belum tanggal gigi (balita). Jenazah tidak diperabukan tetapi cukup dikuburkan, lalu kuburannya dirapuh atau diratakan dengan tirtha Pengerapuh.' WHERE id = 14 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.138, hlm.148 (e. Banten Keruron); doc2/Pitra_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Upacara kematian akibat keguguran kandungan yang masih berbentuk darah (gumpalan darah) dan belum berbentuk janin atau manusia. Bantennya cukup Prayascita sebagai simbol penyucian diri, terutama bagi ibu dan keluarga.' WHERE id = 15 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.148 (f.); doc2/Pitra_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Upacara pembersihan serta penyucian di rumah duka setelah ada orang meninggal. Bila jenazah berada atau sempat dibawa ke rumah, digunakan Banten Pejati, Caru Eka Sata (Ayam Brumbun), Prayascita, Durmanggala, Byakala, dan Segehan; bila jenazah diselesaikan di luar rumah (rumah sakit atau rumah duka) cukup Banten Prayascita.' WHERE id = 16 AND deskripsi IS NULL;
+-- sumber: buku.txt §25.a hlm.149; doc2/Manusa_Yadnya.txt judul 'Pawidhi Widana (Perkawinan / Wiwaha)'
+UPDATE upacara SET deskripsi = 'Upacara Manusa Yadnya untuk perkawinan (wiwaha) umat Hindu. Dikenal juga sebagai pawiwahan, nganten, atau upacara pernikahan.' WHERE id = 17 AND deskripsi IS NULL;
+-- sumber: doc2/Manusa_Yadnya.txt judul 'Megedong-gedongan (Kehamilan)'; buku.txt §25.b; rri.co.id/denpasar/regional/1889912/tiga-hal-penting-dalam-magedong-gedongan (Penyuluh Agama Hindu Kemenag Bali); doi.org/10.36417/widyagenitri.v11i1.344
+UPDATE upacara SET deskripsi = 'Upacara Manusa Yadnya bagi bayi dalam kandungan saat kehamilan berusia sekitar 7 bulan, untuk memohon keselamatan dan kesehatan janin serta ibunya dan membersihkan keduanya dari pengaruh negatif. Dikenal juga sebagai upacara kehamilan atau Magedong-gedongan.' WHERE id = 18 AND deskripsi IS NULL;
+-- sumber: buku.txt §25.c hlm.152-153; doc2/Manusa_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Upacara menyambut bayi yang baru lahir (Mapag Rare), termasuk upacara untuk ari-ari yang dimasukkan ke dalam kelapa yang dibelah dua atau payuk pere/periuk tanah lalu ditanam. Cocok untuk kelahiran bayi atau bayi baru lahir.' WHERE id = 19 AND deskripsi IS NULL;
+-- sumber: doc2/Manusa_Yadnya.txt judul 'Kepus Pusar (Putus Tali Pusar)'; buku.txt §25.d hlm.153; desacanggu.badungkab.go.id/berita/35910-... (istilah kepus pungsed)
+UPDATE upacara SET deskripsi = 'Upacara Manusa Yadnya saat tali pusar bayi putus (lepas), menggunakan Banten Pebersihan/Pengeresikan dengan bija kuning di pelinggih, sumur, dapur, dan kamar. Dikenal juga sebagai kepus pungsed.' WHERE id = 20 AND deskripsi IS NULL;
+-- sumber: buku.txt §25.e hlm.154; doc2/Manusa_Yadnya.txt; basaibubali.org/Holiday_or_Ceremony_Upacara_Tutug_Kambuhan; desacanggu.badungkab.go.id/berita/35910-...
+UPDATE upacara SET deskripsi = 'Upacara bayi berumur 42 hari (enam wuku) yang menyucikan bayi dan ibunya dari kekotoran, dengan banten pebersihan untuk ibu dan untuk bayi. Dikenal juga sebagai Tutug Kambuhan, abulan pitung dina (bulan pitung dina), atau macolongan.' WHERE id = 21 AND deskripsi IS NULL;
+-- sumber: buku.txt §25.f; doc2/Manusa_Yadnya.txt; desacanggu.badungkab.go.id/berita/35910-...; ojs.mahadewa.ac.id/index.php/nirwasita/article/download/3623/2456
+UPDATE upacara SET deskripsi = 'Upacara bayi berumur tiga bulan Bali (105 hari) untuk menyucikan bayi lahir dan batin serta memohon keselamatan dan kesehatannya. Dikenal juga sebagai Nyambutin, nelu bulanin, atau tigang sasih.' WHERE id = 22 AND deskripsi IS NULL;
+-- sumber: doc2/Manusa_Yadnya.txt 'Bayi Umur 6 Bulan (Otonan)'; ejournal.unhi.ac.id/index.php/vidyawertta/article/download/324/271
+UPDATE upacara SET deskripsi = 'Upacara peringatan hari kelahiran berdasarkan saptawara, pancawara, dan wuku, yang pertama kali dilakukan saat bayi berumur 210 hari (enam bulan Bali) lalu berulang setiap 210 hari, untuk meningkatkan kesucian jasmani dan rohani serta memohon keselamatan. Dikenal juga sebagai otonan, ngotonin, weton, atau pawetonan.' WHERE id = 23 AND deskripsi IS NULL;
+-- sumber: buku.txt §25.g; doc2/Manusa_Yadnya.txt; kemenagkarangasem.id/kegiatan-penyuluhan-tentang-upacara-menek-kelih/
+UPDATE upacara SET deskripsi = 'Upacara peralihan dari masa anak-anak menuju remaja (akil balig), misalnya saat anak perempuan mengalami menstruasi pertama, untuk memohon agar anak tumbuh berbakti kepada orang tua dan dijauhkan dari pengaruh negatif. Untuk laki-laki disebut Ngerajasinga dan untuk perempuan Ngerajaswala. Dikenal juga sebagai Menek Bajang.' WHERE id = 24 AND deskripsi IS NULL;
+-- sumber: buku.txt §25.h; doc2/Manusa_Yadnya.txt; bimashindu.kemenag.go.id/berita-daerah/metatah-masal-...; travel.kompas.com/.../apa-yang-dimaksud-dengan-upacara-potong-gigi (kutipan Ketua PHDI Banten)
+UPDATE upacara SET deskripsi = 'Upacara Manusa Yadnya bagi anak yang sudah akil balig atau dewasa, berupa pengikiran enam gigi atas sebagai simbol mengendalikan Sad Ripu (enam musuh dalam diri), yang merupakan kewajiban orang tua kepada anaknya. Dikenal juga sebagai Metatah, Mepandes, Mesangih, atau potong gigi.' WHERE id = 25 AND deskripsi IS NULL;
+-- sumber: buku.txt §25.i hlm.158-161
+UPDATE upacara SET deskripsi = 'Upacara penyucian diri lahir dan batin untuk memohon waranugraha Sanghyang Widhi Wasa, misalnya bagi yang akan menjadi Pemangku (Pinandita) atau yang mulai mempelajari ilmu pengetahuan. Jenisnya antara lain Pawintenan Saraswati, Di Bunga, Pemangku, Tukang, Sadeg/dasaran, Dalang, Balian, dan Mahawisesa (pengurus banjar).' WHERE id = 26 AND deskripsi IS NULL;
+-- sumber: buku.txt §21.a hlm.104, hlm.122, 131, 148; doc2/Dewa_Yadnya.txt ('Pecaruan Eka Sata: Menggunakan Caru Ayam Brumbun')
+UPDATE upacara SET deskripsi = 'Caru tingkat paling dasar yang menggunakan satu ekor ayam brumbun (Caru Ayam Brumbun), sebagai banten sor (Bhuta Yadnya). Dipakai antara lain sebelum Nyepi, Piodalan Suci Sari/Alit, Melaspas, dan pembersihan rumah duka.' WHERE id = 27 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.110 (b. Caru Panca Sata), hlm.127, 131
+UPDATE upacara SET deskripsi = 'Caru yang menggunakan lima ekor ayam (putih tulus, biying/merah, putih siyungan, hitam, dan brumbun) dengan warna dan urip disesuaikan mata angin, dan sering disebut Caru dasar. Dipakai antara lain sebelum Piodalan Suci Laksana dan pada Melaspas.' WHERE id = 28 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.110-111 (c.); doc2/Bhuta_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Caru yang sama dengan Caru Panca Sata ditambah asu bang bungkem dan bebek bulu sikep, biasanya dipergunakan pada tingkatan upacara yang menggunakan banten Dewa-Dewi.' WHERE id = 35 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.111 (d.); doc2/Bhuta_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Caru yang sama dengan Caru Panca Sanak ditambah kambing dan angsa, biasanya dipergunakan pada tingkatan upacara yang menggunakan Catur Rebah.' WHERE id = 36 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.111 (e.); doc2/Bhuta_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Caru yang sama dengan Caru Panca Kelud ditambah godel (anak sapi) dan kucit butuhan, biasanya dipergunakan pada upacara dengan tingkatan Catur Rebah.' WHERE id = 37 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.96 (Tawur Lebuh Gentuh), hlm.112 (f.); doc2/Bhuta_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Caru atau Tawur (Bhuta Yadnya tingkat besar) yang sama dengan Caru Balik Sumpah ditambah kidang, menjangan, ayam ijo alab, sapi, dan kambing, biasanya dipergunakan untuk upacara tingkatan Catur Muka dengan Sanggar Surya merong tiga.' WHERE id = 38 AND deskripsi IS NULL;
+-- sumber: buku.txt hlm.112 (g.); doc2/Bhuta_Yadnya.txt
+UPDATE upacara SET deskripsi = 'Caru yang sama dengan Caru/Tawur Labuh Gentuh tetapi menggunakan tiga ekor kerbau yang diletakkan di kaja (utara), madiya (tengah), dan kelod (selatan).' WHERE id = 39 AND deskripsi IS NULL;
+COMMIT;
