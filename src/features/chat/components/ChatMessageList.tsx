@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
 import { UiChatMessage } from '../hooks/useChatStream';
 import { CreatePlanCta } from './CreatePlanCta';
 
@@ -10,197 +11,61 @@ export interface ChatMessageListProps {
   isLoading: boolean;
 }
 
-function parseInline(text: string): React.ReactNode[] {
-  const tokens: React.ReactNode[] = [];
-  // Tokenizer pattern: markdown link, citation [N], bold **text**, italic *text*, inline code `code`
-  const pattern = /(!?\[([^\]]+)\]\(([^)]+)\))|(\[(\d+)\])|(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(`([^`]+)`)/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      tokens.push(text.slice(lastIndex, match.index));
-    }
-
-    if (match[1]) {
-      // Link [text](url)
-      const linkText = match[2];
-      const href = match[3];
-      if (href.startsWith('#cite-')) {
-        tokens.push(
-          <sup key={match.index} className="px-0.5 text-[#C9A24A] font-bold text-[10px]">
-            [{linkText}]
-          </sup>
-        );
-      } else {
-        tokens.push(
-          <a
-            key={match.index}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#C9A24A] hover:underline underline-offset-2 font-medium"
-          >
-            {linkText} ↗
-          </a>
-        );
-      }
-    } else if (match[4]) {
-      // Citation [1]
-      const citNum = match[5];
-      tokens.push(
-        <sup key={match.index} className="px-0.5 text-[#C9A24A] font-bold text-[10px]">
-          [{citNum}]
-        </sup>
-      );
-    } else if (match[6]) {
-      // Bold **text**
-      tokens.push(
-        <strong key={match.index} className="font-bold text-white">
-          {match[7]}
-        </strong>
-      );
-    } else if (match[8]) {
-      // Italic *text*
-      tokens.push(
-        <em key={match.index} className="italic text-[#F3E9CF]">
-          {match[9]}
-        </em>
-      );
-    } else if (match[10]) {
-      // Inline code `code`
-      tokens.push(
-        <code key={match.index} className="px-1.5 py-0.5 rounded bg-white/10 text-[#C9A24A] font-mono text-xs">
-          {match[11]}
-        </code>
-      );
-    }
-
-    lastIndex = pattern.lastIndex;
-  }
-
-  if (lastIndex < text.length) {
-    tokens.push(text.slice(lastIndex));
-  }
-
-  return tokens.length > 0 ? tokens : [text];
-}
-
-function ChatMarkdown({ content }: { content: string }) {
-  if (!content) return null;
-
-  // Bersihkan sitasi ganda berulang misal [1] [1] -> [1]
-  const prepared = content
-    .replace(/\[(\d+)\](?:\s*[,;]?\s*\[\1\])+/g, '[$1]')
-    .replace(/\[(\d+)\](?!\()/g, '[[$1]](#cite-$1)');
-
-  const lines = prepared.split('\n');
-  const elements: React.ReactNode[] = [];
-  let currentList: { type: 'ul' | 'ol'; items: string[] } | null = null;
-
-  function flushList() {
-    if (!currentList) return;
-    if (currentList.type === 'ul') {
-      elements.push(
-        <ul key={`ul-${elements.length}`} className="space-y-1.5 pl-1 my-1">
-          {currentList.items.map((item, idx) => (
-            <li key={idx} className="flex items-start gap-2">
-              <span className="text-[#C9A24A] font-bold text-xs shrink-0">•</span>
-              <div>{parseInline(item)}</div>
-            </li>
-          ))}
-        </ul>
-      );
-    } else {
-      elements.push(
-        <ol key={`ol-${elements.length}`} className="list-decimal list-inside space-y-1.5 pl-1 my-1 marker:text-[#C9A24A] marker:font-bold">
-          {currentList.items.map((item, idx) => (
-            <li key={idx}>
-              <span className="inline">{parseInline(item)}</span>
-            </li>
-          ))}
-        </ol>
-      );
-    }
-    currentList = null;
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const rawLine = lines[i];
-    const line = rawLine.trim();
-
-    if (!line) {
-      flushList();
-      continue;
-    }
-
-    // Heading: #, ##, ###
-    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
-    if (headingMatch) {
-      flushList();
-      elements.push(
-        <h4 key={`h-${elements.length}`} className="text-sm sm:text-base font-bold text-[#C9A24A] pt-2">
-          {parseInline(headingMatch[2])}
-        </h4>
-      );
-      continue;
-    }
-
-    // Bullet list: •, -, *, +
-    const bulletMatch = line.match(/^([•\-\*+])\s+(.*)$/);
-    if (bulletMatch) {
-      if (!currentList || currentList.type !== 'ul') {
-        flushList();
-        currentList = { type: 'ul', items: [] };
-      }
-      currentList.items.push(bulletMatch[2]);
-      continue;
-    }
-
-    // Numbered list: 1., 2., etc.
-    const numberedMatch = line.match(/^\d+[\.\)]\s+(.*)$/);
-    if (numberedMatch) {
-      if (!currentList || currentList.type !== 'ol') {
-        flushList();
-        currentList = { type: 'ol', items: [] };
-      }
-      currentList.items.push(numberedMatch[1]);
-      continue;
-    }
-
-    // Paragraph
-    flushList();
-
-    if (line.includes('sulinggih atau pemangku')) {
-      elements.push(
-        <p key={`p-${elements.length}`} className="text-[11px] text-[#F3E9CF]/80 italic pt-1 border-t border-white/10 my-1">
-          {parseInline(line)}
-        </p>
-      );
-    } else {
-      elements.push(
-        <p key={`p-${elements.length}`} className="my-1">
-          {parseInline(line)}
-        </p>
-      );
-    }
-  }
-
-  flushList();
-
-  return (
-    <div className="space-y-2 text-xs sm:text-sm text-stone-200 leading-relaxed">
-      {elements}
-    </div>
-  );
-}
-
 export function ChatMessageList({ messages, isLoading }: ChatMessageListProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  function renderFormattedContent(text: string) {
+    if (!text) return null;
+    // Ubah sitasi [1] jadi link khusus supaya bisa diberi gaya emas
+    const prepared = text
+      .replace(/\[(\d+)\](?:\s*[,;]?\s*\[\1\])+/g, '[$1]')
+      .replace(/\[(\d+)\](?!\()/g, '[[$1]](#cite-$1)');
+    return (
+      <div className="space-y-2.5 text-xs sm:text-sm text-stone-200 leading-relaxed">
+        <ReactMarkdown
+          components={{
+            h1: ({ children }) => <h4 className="text-sm sm:text-base font-bold text-[#C9A24A] pt-2">{children}</h4>,
+            h2: ({ children }) => <h4 className="text-sm sm:text-base font-bold text-[#C9A24A] pt-2">{children}</h4>,
+            h3: ({ children }) => <h4 className="text-sm sm:text-base font-bold text-[#C9A24A] pt-2">{children}</h4>,
+            p: ({ children }) => {
+              const plain = String(children);
+              if (plain.includes('sulinggih atau pemangku')) {
+                return <p className="text-[11px] text-[#F3E9CF]/80 italic pt-1 border-t border-white/10">{children}</p>;
+              }
+              return <p>{children}</p>;
+            },
+            ul: ({ children }) => <ul className="space-y-1.5 pl-1">{children}</ul>,
+            ol: ({ children }) => <ol className="list-decimal list-inside space-y-1.5 pl-1 marker:text-[#C9A24A] marker:font-bold">{children}</ol>,
+            li: ({ children }) => (
+              <li className="flex items-start gap-2">
+                <span className="text-[#C9A24A] font-bold text-xs shrink-0">•</span>
+                <div>{children}</div>
+              </li>
+            ),
+            strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+            em: ({ children }) => <em className="italic text-[#F3E9CF]">{children}</em>,
+            a: ({ href, children }) => {
+              if (href?.startsWith('#cite-')) {
+                return <sup className="px-0.5 text-[#C9A24A] font-bold text-[10px]">{children}</sup>;
+              }
+              return (
+                <a href={href} target="_blank" rel="noopener noreferrer"
+                   className="text-[#C9A24A] hover:underline underline-offset-2 font-medium">
+                  {children} ↗
+                </a>
+              );
+            },
+          }}
+        >
+          {prepared}
+        </ReactMarkdown>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-6">
@@ -240,7 +105,7 @@ export function ChatMessageList({ messages, isLoading }: ChatMessageListProps) {
               ) : (
                 <div>
                   {msg.content ? (
-                    <ChatMarkdown content={msg.content} />
+                    renderFormattedContent(msg.content)
                   ) : (
                     <div className="flex items-center gap-2 text-xs text-stone-400 py-1">
                       <span className="w-2 h-2 rounded-full bg-[#C9A24A] animate-ping" />

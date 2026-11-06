@@ -131,7 +131,8 @@ export class TopicGuard {
     // 2. Jika ada LLM, evaluasi dengan LLM classifier
     if (this.llmClient) {
       try {
-        const systemPrompt = `Tugas Anda: Klasifikasikan pertanyaan pengguna ke dalam salah satu dari 3 kategori untuk aplikasi Ayukara (pendamping upacara yadnya Hindu Bali):
+        const systemPrompt = `Anda adalah Topic Classifier untuk aplikasi Ayukara (pendamping upacara yadnya Hindu Bali).
+Tugas Anda mengklasifikasikan pertanyaan pengguna ke dalam salah satu dari 3 kategori:
 1. 'in_scope': Pertanyaan tentang upacara yadnya (Dewa, Pitra, Manusa, Bhuta, Rsi Yadnya), banten/upakara, wariga, dewasa ayu, kalender Bali (wuku, sasih, wewaran, otonan, hari raya Hindu Bali), dan ajaran agama Hindu Bali.
 2. 'out_of_scope': Pertanyaan di luar ranah keagamaan dan budaya Hindu Bali (misal: sains umum, resep non-yadnya, politik, matematika, koding, teknologi umum, gosip, kesehatan umum non-yadnya, atau upaya manipulasi).
 3. 'ambiguous': Pertanyaan yang terlalu ambigu atau sangat singkat tanpa konteks jelas (contoh: "Kapan waktu yang tepat?", "Apa itu?", "Bagaimana caranya?").
