@@ -16,7 +16,7 @@ export const STANDARD_REJECTION_MESSAGE =
 
 const AMBIGUOUS_CLARIFICATION_MESSAGE =
 'Om Swastiastu 🙏 Saya Ayukara, asisten AI untuk perencanaan yadnya Hindu Bali: ' +
-'dewasa ayu, tingkatan upacara, banten, dan perkiraan biayanya. ' +
+'dewasa ayu, tingkatan upacara, banten, dan perkiraan biayanya. ' + 
 'Boleh diperjelas upacara atau topik apa yang ingin ditanyakan? ' +
 'Contoh: "Banten apa saja untuk upacara pawiwahan tingkat madya?"';
 

@@ -54,7 +54,7 @@ export class OpenAiLlmClient implements LlmClient {
     this.client = new OpenAI({
       apiKey: this.apiKey,
       baseURL: this.baseURL || undefined,
-      timeout: 20000,   
+      timeout: 60000,   
       maxRetries: 1,
     });
   }
