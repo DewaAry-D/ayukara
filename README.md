@@ -288,5 +288,7 @@ Aplikasi Ayukara beroperasi dengan sistem **Akses Terbuka (Open Access)** untuk 
 ## Team Members
 
 I Komang Guna Januarta
+
 I Dewa Made Ary Dwisaputra
+
 Luh Adelia Pratiwi Djelantik
